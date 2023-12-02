@@ -29,7 +29,7 @@ jobs:
 
       - name: Generate random number
         run: |
-          GRPC_PORT=15201
+          GRPC_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
           METRICS_PORT=11402
           PROXY_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
           SWAGGER_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
