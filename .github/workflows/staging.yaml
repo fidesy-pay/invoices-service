@@ -1,0 +1,111 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - '*'
+      - '!master'
+
+jobs:
+  prepare:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get app name
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          REPO_NAME=${{ github.event.repository.name }}
+          
+          # Check if the branch name is "master"
+          if [ $BRANCH_NAME = "master" ]; then
+            APP_NAME=$REPO_NAME
+          else
+            APP_NAME="${REPO_NAME}_${BRANCH_NAME}"
+          fi
+          
+          echo "APP_NAME=$APP_NAME" >> vars.env
+          echo $APP_NAME
+
+      - name: Generate random number
+        run: |
+          GRPC_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+          METRICS_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+          PROXY_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+          SWAGGER_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+          
+          echo "GRPC_PORT=$GRPC_PORT" >> vars.env
+          echo "METRICS_PORT=$METRICS_PORT" >> vars.env
+          echo "PROXY_PORT=$PROXY_PORT" >> vars.env
+          echo "SWAGGER_PORT=$SWAGGER_PORT" >> vars.env
+          echo "PROJECT_NAME=${{ github.event.repository.name }}" >> vars.env
+
+
+      - name: Generate swagger
+        run: |
+          source vars.env
+
+          echo $APP_NAME
+          
+          export GOBIN=~/go/bin
+          export PATH=$PATH:$GOBIN
+          
+          make generate-swagger APP_NAME=$APP_NAME PROXY_PORT=$PROXY_PORT PROJECT_NAME=$PROJECT_NAME
+  
+
+  clean:
+    runs-on: self-hosted
+    needs: prepare
+    steps:
+      - name: Remove container and image
+        run: |
+          source vars.env
+          
+          if docker inspect $APP_NAME > /dev/null 2>&1; then docker rm -f $APP_NAME && docker rmi -f $APP_NAME; else echo "Container not found."; fi
+
+  build:
+    runs-on: self-hosted
+    needs: clean
+    steps:
+      - name: Build binary
+        run: |
+          GOARCH=amd64 GOOS=linux go build -o ./bin/main ./cmd/${{ github.event.repository.name }}
+
+  deploy:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Build and run docker container
+        run: |
+          source vars.env
+          
+          docker build --tag $APP_NAME .
+          docker run --name $APP_NAME -d \
+            --network zoo \
+            -e APP_NAME=$APP_NAME \
+            -e ENV=STAGING \
+            -e GRPC_PORT=$GRPC_PORT -p $GRPC_PORT:$GRPC_PORT \
+            -e METRICS_PORT=$METRICS_PORT -p $METRICS_PORT:$METRICS_PORT \
+            -e PROXY_PORT=$PROXY_PORT -p $PROXY_PORT:$PROXY_PORT \
+            -e SWAGGER_PORT=$SWAGGER_PORT -p $SWAGGER_PORT:$SWAGGER_PORT \
+             $APP_NAME
+          
+          
+          # Update DNS settings
+          curl --request POST \
+                        --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records \
+                        --header "Content-Type: application/json" \
+                        --header "X-Auth-Email: ${{ secrets.CF_X_AUTH_EMAIL }}" \
+                        --header "X-Auth-Key: ${{ secrets.CF_X_AUTH_KEY }}" \
+                         --data "{\"content\": \"${{ vars.SERVER_HOST }}\",\"name\":\"${APP_NAME}\",\"proxied\": false,\"type\": \"A\",\"comment\": \"Domain verification record\",\"tags\": [],\"ttl\": 3600}"
+          
+          # Update NGINX config
+          export RANDOM_NUMBER=$RANDOM_NUMBER
+          export SERVER_HOST=${{ vars.SERVER_HOST }}
+          export APP_NAME=$APP_NAME
+          export SWAGGER_PORT=$SWAGGER_PORT
+          bash ./scripts/update_nginx.sh
+          
+          echo ""
+          echo "http://"$APP_NAME".fidesy.xyz/docs"
