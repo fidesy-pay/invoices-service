@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/fidesy-pay/payment-service/internal/pkg/models"
 	desc "github.com/fidesy-pay/payment-service/pkg/payment-service"
+	"google.golang.org/grpc"
 )
 
 type (
@@ -23,4 +24,8 @@ func New(paymentService PaymentService) *Implementation {
 	return &Implementation{
 		paymentService: paymentService,
 	}
+}
+
+func (i *Implementation) GetDescription() *grpc.ServiceDesc {
+	return &desc.PaymentService_ServiceDesc
 }
