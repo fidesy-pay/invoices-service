@@ -7,7 +7,7 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/fidesy-pay/payment-service/internal/pkg/models"
 	in_memory "github.com/fidesy-pay/payment-service/internal/pkg/storage/in-memory"
-	crypto_facade "github.com/fidesy-pay/payment-service/pkg/crypto-facade"
+	crypto_service "github.com/fidesy-pay/payment-service/pkg/crypto-service"
 	desc "github.com/fidesy-pay/payment-service/pkg/payment-service"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -20,7 +20,7 @@ type (
 		Consume() <-chan *sarama.ConsumerMessage
 	}
 	CryptoServiceClient interface {
-		AcceptCrypto(ctx context.Context, req *crypto_facade.AcceptCryptoRequest, opts ...grpc.CallOption) (*crypto_facade.AcceptCryptoResponse, error)
+		AcceptCrypto(ctx context.Context, req *crypto_service.AcceptCryptoRequest, opts ...grpc.CallOption) (*crypto_service.AcceptCryptoResponse, error)
 	}
 
 	Storage interface {
@@ -54,9 +54,9 @@ func New(
 }
 
 func (s *Service) CreatePayment(ctx context.Context, req *desc.CreatePaymentRequest) (*models.Payment, error) {
-	acceptCryptoResp, err := s.cryptoServiceClient.AcceptCrypto(ctx, &crypto_facade.AcceptCryptoRequest{
-		Chain: crypto_facade.Chain(req.GetChain()),
-		Token: crypto_facade.Token(req.GetToken()),
+	acceptCryptoResp, err := s.cryptoServiceClient.AcceptCrypto(ctx, &crypto_service.AcceptCryptoRequest{
+		Chain: crypto_service.Chain(req.GetChain()),
+		Token: crypto_service.Token(req.GetToken()),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cryptoServiceClient.AcceptCrypto: %w", err)
