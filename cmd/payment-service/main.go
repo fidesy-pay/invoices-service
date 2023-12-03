@@ -7,6 +7,7 @@ import (
 	"github.com/fidesy-pay/payment-service/internal/pkg/kafka"
 	payment_service "github.com/fidesy-pay/payment-service/internal/pkg/payment-service"
 	in_memory "github.com/fidesy-pay/payment-service/internal/pkg/storage/in-memory"
+	crypto_service "github.com/fidesy-pay/payment-service/pkg/crypto-service"
 	"github.com/fidesyx/platform/pkg/scratch"
 	"log"
 	"os"
@@ -28,7 +29,12 @@ func main() {
 	)
 	defer cancel()
 
-	err := config.Init()
+	scratchApp, err := scratch.New(ctx)
+	if err != nil {
+		log.Fatalf("scratch.New: %v", err)
+	}
+
+	err = config.Init()
 	if err != nil {
 		log.Fatalf("config.Init: %v", err)
 	}
@@ -46,7 +52,11 @@ func main() {
 		}
 	}()
 
-	cryptoServiceClient, err := NewCryptoServiceClient(ctx)
+	cryptoServiceClient, err := scratch.NewClient[crypto_service.CryptoServiceClient](
+		ctx,
+		crypto_service.NewCryptoServiceClient,
+		"crypto-service",
+	)
 	if err != nil {
 		log.Fatalf("NewCryptoServiceClient: %v", err)
 	}
@@ -55,9 +65,7 @@ func main() {
 
 	impl := app.New(paymentService)
 
-	app := scratch.New()
-
-	if err = app.Run(ctx, impl); err != nil {
+	if err = scratchApp.Run(ctx, impl); err != nil {
 		log.Fatalf("app.Run: %v", err)
 	}
 }
