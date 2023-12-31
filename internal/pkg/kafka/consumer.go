@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/IBM/sarama"
-	"github.com/fidesy-pay/payment-service/internal/config"
+	"github.com/fidesy-pay/invoices-service/internal/config"
 )
 
 type Consumer struct {
 	consumer sarama.PartitionConsumer
 }
 
-func NewConsumer(ctx context.Context, topicName string) (*Consumer, error) {
+func NewConsumer(_ context.Context, topicName string) (*Consumer, error) {
 	brokerList := config.Get(config.KafkaBrokers).([]string)
 
 	config := sarama.NewConfig()

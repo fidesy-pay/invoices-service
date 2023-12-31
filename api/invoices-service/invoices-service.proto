@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package invoices_service;
+
+option go_package = "github.com/fidesy-pay/invoices-service;invoices_service";
+
+import "google/protobuf/timestamp.proto";
+
+service InvoicesService {
+  rpc CreateInvoice(CreateInvoiceRequest) returns (CreateInvoiceResponse);
+  rpc CheckInvoice(CheckInvoiceRequest) returns (CheckInvoiceResponse);
+  rpc UpdateInvoice(UpdateInvoiceRequest) returns (UpdateInvoiceResponse);
+}
+
+message Invoice {
+  string id = 1;
+  double amount = 2;
+  string chain = 3;
+  string token = 4;
+  InvoiceStatus status = 5;
+  string address = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message CreateInvoiceRequest {}
+
+message CreateInvoiceResponse {
+  // Invoice identifier
+  string id = 1;
+}
+
+message CheckInvoiceRequest {
+  // Invoice identifier
+  string id = 1;
+}
+
+enum InvoiceStatus {
+  UNKNOWN_STATUS = 0;
+  NEW = 1;
+  PENDING = 2;
+  FAILED = 3;
+  SUCCESS = 4;
+}
+
+message CheckInvoiceResponse {
+  Invoice invoice = 1;
+}
+
+message UpdateInvoiceRequest {
+  string id = 1;
+  double amount = 2;
+  string chain = 3;
+  string token = 4;
+}
+
+message UpdateInvoiceResponse {
+  Invoice invoice = 1;
+}

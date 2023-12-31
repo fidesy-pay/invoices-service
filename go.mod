@@ -1,4 +1,4 @@
-module github.com/fidesy-pay/payment-service
+module github.com/fidesy-pay/invoices-service
 
 go 1.21.2
 

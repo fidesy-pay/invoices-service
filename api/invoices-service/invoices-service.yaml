@@ -1,0 +1,11 @@
+type: google.api.Service
+config_version: 3
+
+http:
+  rules:
+    - selector: invoices_service.InvoicesService.CreateInvoice
+      post: /create-invoice
+      body: '*'
+    - selector: invoices_service.InvoicesService.CheckInvoice
+      post: /check-invoice
+      body: '*'

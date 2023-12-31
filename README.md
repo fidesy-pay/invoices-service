@@ -1,1 +1,1 @@
-# payment-service
+# invoices-service

@@ -2,30 +2,30 @@ package app
 
 import (
 	"context"
-	"github.com/fidesy-pay/payment-service/internal/pkg/models"
-	desc "github.com/fidesy-pay/payment-service/pkg/payment-service"
+	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
+	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"google.golang.org/grpc"
 )
 
 type (
-	PaymentService interface {
-		CreatePayment(ctx context.Context, req *desc.CreatePaymentRequest) (*models.Payment, error)
-		CheckPayment(ctx context.Context, paymentID string) (desc.PaymentStatus, error)
+	Implementation struct {
+		desc.UnimplementedInvoicesServiceServer
+
+		invoicesService InvoicesService
+	}
+	InvoicesService interface {
+		CreateInvoice(ctx context.Context, req *desc.CreateInvoiceRequest) (*models.Invoice, error)
+		CheckInvoice(ctx context.Context, invoiceID string) (*models.Invoice, error)
+		UpdateInvoice(ctx context.Context, req *desc.UpdateInvoiceRequest) (*models.Invoice, error)
 	}
 )
 
-type Implementation struct {
-	desc.UnimplementedPaymentServiceServer
-
-	paymentService PaymentService
-}
-
-func New(paymentService PaymentService) *Implementation {
+func New(invoicesService InvoicesService) *Implementation {
 	return &Implementation{
-		paymentService: paymentService,
+		invoicesService: invoicesService,
 	}
 }
 
 func (i *Implementation) GetDescription() *grpc.ServiceDesc {
-	return &desc.PaymentService_ServiceDesc
+	return &desc.InvoicesService_ServiceDesc
 }

@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"github.com/fidesy-pay/payment-service/internal/app"
-	"github.com/fidesy-pay/payment-service/internal/config"
-	"github.com/fidesy-pay/payment-service/internal/pkg/kafka"
-	payment_service "github.com/fidesy-pay/payment-service/internal/pkg/payment-service"
-	in_memory "github.com/fidesy-pay/payment-service/internal/pkg/storage/in-memory"
-	crypto_service "github.com/fidesy-pay/payment-service/pkg/crypto-service"
+	"github.com/fidesy-pay/invoices-service/internal/app"
+	"github.com/fidesy-pay/invoices-service/internal/config"
+	invoicesservice "github.com/fidesy-pay/invoices-service/internal/pkg/invoices-service"
+	"github.com/fidesy-pay/invoices-service/internal/pkg/kafka"
+	in_memory "github.com/fidesy-pay/invoices-service/internal/pkg/storage/in-memory"
+	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	"github.com/fidesyx/platform/pkg/scratch"
 	"log"
 	"os"
@@ -61,9 +61,9 @@ func main() {
 		log.Fatalf("NewCryptoServiceClient: %v", err)
 	}
 
-	paymentService := payment_service.New(ctx, storage, kafkaConsumer, cryptoServiceClient)
+	invoicesService := invoicesservice.New(ctx, storage, kafkaConsumer, cryptoServiceClient)
 
-	impl := app.New(paymentService)
+	impl := app.New(invoicesService)
 
 	if err = scratchApp.Run(ctx, impl); err != nil {
 		log.Fatalf("app.Run: %v", err)
