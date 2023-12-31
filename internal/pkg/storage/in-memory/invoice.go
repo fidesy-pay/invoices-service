@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
+	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"github.com/google/uuid"
 )
 
@@ -25,12 +26,15 @@ type ListInvoicesFilter struct {
 	// only one at a time
 	IDIn      []uuid.UUID
 	AddressIn []string
+	StatusIn  []desc.InvoiceStatus
 }
 
 func (s *Storage) ListInvoices(_ context.Context, filter ListInvoicesFilter) ([]*models.Invoice, error) {
 	invoices := make([]*models.Invoice, 0)
 
 	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	if len(filter.IDIn) > 0 {
 		for _, id := range filter.IDIn {
 			invoice, ok := s.invoices[id]
@@ -51,8 +55,6 @@ func (s *Storage) ListInvoices(_ context.Context, filter ListInvoicesFilter) ([]
 			}
 		}
 	}
-
-	s.mu.RUnlock()
 
 	return invoices, nil
 }

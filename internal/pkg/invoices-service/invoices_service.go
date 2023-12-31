@@ -22,6 +22,7 @@ type (
 	}
 	CryptoServiceClient interface {
 		AcceptCrypto(ctx context.Context, req *crypto_service.AcceptCryptoRequest, opts ...grpc.CallOption) (*crypto_service.AcceptCryptoResponse, error)
+		Transfer(ctx context.Context, in *crypto_service.TransferRequest, opts ...grpc.CallOption) (*crypto_service.TransferResponse, error)
 	}
 
 	Storage interface {
@@ -84,8 +85,9 @@ func (s *Service) UpdateInvoice(ctx context.Context, req *desc.UpdateInvoiceRequ
 	invoice := invoices[0]
 
 	acceptCryptoResp, err := s.cryptoServiceClient.AcceptCrypto(ctx, &crypto_service.AcceptCryptoRequest{
-		Chain: req.GetChain(),
-		Token: req.GetToken(),
+		InvoiceId: req.GetId(),
+		Chain:     req.GetChain(),
+		Token:     req.GetToken(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cryptoServiceClient.AcceptCrypto: %w", err)
@@ -170,5 +172,18 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 			log.Printf("processTopicMessage: storage.UpdateInvoice: %v", err)
 			return
 		}
+
+		transferResp, err := s.cryptoServiceClient.Transfer(ctx, &crypto_service.TransferRequest{
+			ClientId:  "4e285e38-811b-4660-ac85-12e6eadc34e7",
+			InvoiceId: invoice.ID.String(),
+			Chain:     invoice.Chain,
+			Token:     invoice.Token,
+		})
+		if err != nil {
+			log.Printf("cryptoServiceClient.Transfer: %v", err)
+			return
+		}
+
+		log.Println("Transaction hash:", transferResp.TransactionHash)
 	}
 }

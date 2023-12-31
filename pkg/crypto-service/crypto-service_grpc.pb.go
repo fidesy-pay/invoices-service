@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	CryptoService_AcceptCrypto_FullMethodName = "/crypto_service.CryptoService/AcceptCrypto"
+	CryptoService_Transfer_FullMethodName     = "/crypto_service.CryptoService/Transfer"
 )
 
 // CryptoServiceClient is the client API for CryptoService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CryptoServiceClient interface {
 	AcceptCrypto(ctx context.Context, in *AcceptCryptoRequest, opts ...grpc.CallOption) (*AcceptCryptoResponse, error)
+	Transfer(ctx context.Context, in *TransferRequest, opts ...grpc.CallOption) (*TransferResponse, error)
 }
 
 type cryptoServiceClient struct {
@@ -46,11 +48,21 @@ func (c *cryptoServiceClient) AcceptCrypto(ctx context.Context, in *AcceptCrypto
 	return out, nil
 }
 
+func (c *cryptoServiceClient) Transfer(ctx context.Context, in *TransferRequest, opts ...grpc.CallOption) (*TransferResponse, error) {
+	out := new(TransferResponse)
+	err := c.cc.Invoke(ctx, CryptoService_Transfer_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CryptoServiceServer is the server API for CryptoService service.
 // All implementations must embed UnimplementedCryptoServiceServer
 // for forward compatibility
 type CryptoServiceServer interface {
 	AcceptCrypto(context.Context, *AcceptCryptoRequest) (*AcceptCryptoResponse, error)
+	Transfer(context.Context, *TransferRequest) (*TransferResponse, error)
 	mustEmbedUnimplementedCryptoServiceServer()
 }
 
@@ -60,6 +72,9 @@ type UnimplementedCryptoServiceServer struct {
 
 func (UnimplementedCryptoServiceServer) AcceptCrypto(context.Context, *AcceptCryptoRequest) (*AcceptCryptoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AcceptCrypto not implemented")
+}
+func (UnimplementedCryptoServiceServer) Transfer(context.Context, *TransferRequest) (*TransferResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Transfer not implemented")
 }
 func (UnimplementedCryptoServiceServer) mustEmbedUnimplementedCryptoServiceServer() {}
 
@@ -92,6 +107,24 @@ func _CryptoService_AcceptCrypto_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CryptoService_Transfer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CryptoServiceServer).Transfer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CryptoService_Transfer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CryptoServiceServer).Transfer(ctx, req.(*TransferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CryptoService_ServiceDesc is the grpc.ServiceDesc for CryptoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -102,6 +135,10 @@ var CryptoService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AcceptCrypto",
 			Handler:    _CryptoService_AcceptCrypto_Handler,
+		},
+		{
+			MethodName: "Transfer",
+			Handler:    _CryptoService_Transfer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
