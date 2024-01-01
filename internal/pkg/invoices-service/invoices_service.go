@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/IBM/sarama"
+	"github.com/fidesy-pay/invoices-service/internal/pkg/common"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	inmemory "github.com/fidesy-pay/invoices-service/internal/pkg/storage/in-memory"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
@@ -56,13 +57,19 @@ func New(
 }
 
 func (s *Service) CreateInvoice(ctx context.Context, req *desc.CreateInvoiceRequest) (*models.Invoice, error) {
+	clientID, err := uuid.Parse(req.GetClientId())
+	if err != nil {
+		return nil, fmt.Errorf("uuid.Parse: %w", err)
+	}
+
 	invoice := &models.Invoice{
 		ID:        uuid.New(),
+		ClientID:  clientID,
 		Status:    desc.InvoiceStatus_NEW,
 		CreatedAt: time.Now(),
 	}
 
-	invoice, err := s.storage.CreateInvoice(ctx, invoice)
+	invoice, err = s.storage.CreateInvoice(ctx, invoice)
 	if err != nil {
 		return nil, fmt.Errorf("storage.CreateInvoice: %w", err)
 	}
@@ -125,6 +132,32 @@ func (s *Service) CheckInvoice(ctx context.Context, invoiceIDStr string) (*model
 	return invoices[0], nil
 }
 
+func (s *Service) ListInvoices(ctx context.Context, reqFilter *desc.ListInvoicesRequest_Filter) ([]*models.Invoice, error) {
+	var err error
+
+	filter := inmemory.ListInvoicesFilter{}
+	if len(reqFilter.ClientIdIn) > 0 {
+		filter.ClientIDIn, err = common.ConvertToUUIDs(reqFilter.GetClientIdIn())
+		if err != nil {
+			return nil, fmt.Errorf("common.ConvertToUUIDs: %w", err)
+		}
+	}
+
+	if len(reqFilter.IdIn) > 0 {
+		filter.IDIn, err = common.ConvertToUUIDs(reqFilter.GetIdIn())
+		if err != nil {
+			return nil, fmt.Errorf("common.ConvertToUUIDs: %w", err)
+		}
+	}
+
+	invoices, err := s.storage.ListInvoices(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("storage.ListInvoices: %w", err)
+	}
+
+	return invoices, nil
+}
+
 func (s *Service) consumeTransactions(ctx context.Context) {
 	for {
 		select {
@@ -174,7 +207,7 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 		}
 
 		transferResp, err := s.cryptoServiceClient.Transfer(ctx, &crypto_service.TransferRequest{
-			ClientId:  "4e285e38-811b-4660-ac85-12e6eadc34e7",
+			ClientId:  invoice.ClientID.String(),
 			InvoiceId: invoice.ID.String(),
 			Chain:     invoice.Chain,
 			Token:     invoice.Token,

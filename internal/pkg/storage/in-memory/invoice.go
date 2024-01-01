@@ -6,6 +6,7 @@ import (
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"github.com/google/uuid"
+	"slices"
 )
 
 var (
@@ -24,9 +25,10 @@ func (s *Storage) CreateInvoice(_ context.Context, invoice *models.Invoice) (*mo
 
 type ListInvoicesFilter struct {
 	// only one at a time
-	IDIn      []uuid.UUID
-	AddressIn []string
-	StatusIn  []desc.InvoiceStatus
+	IDIn       []uuid.UUID
+	AddressIn  []string
+	ClientIDIn []uuid.UUID
+	StatusIn   []desc.InvoiceStatus
 }
 
 func (s *Storage) ListInvoices(_ context.Context, filter ListInvoicesFilter) ([]*models.Invoice, error) {
@@ -52,6 +54,14 @@ func (s *Storage) ListInvoices(_ context.Context, filter ListInvoicesFilter) ([]
 				if invoice.Address == address {
 					invoices = append(invoices, invoice)
 				}
+			}
+		}
+	}
+
+	if len(filter.ClientIDIn) > 0 {
+		for _, invoice := range s.invoices {
+			if slices.Contains(filter.ClientIDIn, invoice.ClientID) {
+				invoices = append(invoices, invoice)
 			}
 		}
 	}

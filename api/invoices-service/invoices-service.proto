@@ -10,6 +10,7 @@ service InvoicesService {
   rpc CreateInvoice(CreateInvoiceRequest) returns (CreateInvoiceResponse);
   rpc CheckInvoice(CheckInvoiceRequest) returns (CheckInvoiceResponse);
   rpc UpdateInvoice(UpdateInvoiceRequest) returns (UpdateInvoiceResponse);
+  rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
 }
 
 message Invoice {
@@ -22,7 +23,9 @@ message Invoice {
   google.protobuf.Timestamp created_at = 7;
 }
 
-message CreateInvoiceRequest {}
+message CreateInvoiceRequest {
+  string client_id = 1;
+}
 
 message CreateInvoiceResponse {
   // Invoice identifier
@@ -55,4 +58,17 @@ message UpdateInvoiceRequest {
 
 message UpdateInvoiceResponse {
   Invoice invoice = 1;
+}
+
+message ListInvoicesRequest {
+  message Filter {
+    repeated string id_in = 1;
+    repeated string client_id_in = 2;
+  }
+
+  Filter filter = 1;
+}
+
+message ListInvoicesResponse {
+  repeated Invoice invoices = 1;
 }

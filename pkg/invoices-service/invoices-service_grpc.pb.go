@@ -22,6 +22,7 @@ const (
 	InvoicesService_CreateInvoice_FullMethodName = "/invoices_service.InvoicesService/CreateInvoice"
 	InvoicesService_CheckInvoice_FullMethodName  = "/invoices_service.InvoicesService/CheckInvoice"
 	InvoicesService_UpdateInvoice_FullMethodName = "/invoices_service.InvoicesService/UpdateInvoice"
+	InvoicesService_ListInvoices_FullMethodName  = "/invoices_service.InvoicesService/ListInvoices"
 )
 
 // InvoicesServiceClient is the client API for InvoicesService service.
@@ -31,6 +32,7 @@ type InvoicesServiceClient interface {
 	CreateInvoice(ctx context.Context, in *CreateInvoiceRequest, opts ...grpc.CallOption) (*CreateInvoiceResponse, error)
 	CheckInvoice(ctx context.Context, in *CheckInvoiceRequest, opts ...grpc.CallOption) (*CheckInvoiceResponse, error)
 	UpdateInvoice(ctx context.Context, in *UpdateInvoiceRequest, opts ...grpc.CallOption) (*UpdateInvoiceResponse, error)
+	ListInvoices(ctx context.Context, in *ListInvoicesRequest, opts ...grpc.CallOption) (*ListInvoicesResponse, error)
 }
 
 type invoicesServiceClient struct {
@@ -68,6 +70,15 @@ func (c *invoicesServiceClient) UpdateInvoice(ctx context.Context, in *UpdateInv
 	return out, nil
 }
 
+func (c *invoicesServiceClient) ListInvoices(ctx context.Context, in *ListInvoicesRequest, opts ...grpc.CallOption) (*ListInvoicesResponse, error) {
+	out := new(ListInvoicesResponse)
+	err := c.cc.Invoke(ctx, InvoicesService_ListInvoices_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // InvoicesServiceServer is the server API for InvoicesService service.
 // All implementations must embed UnimplementedInvoicesServiceServer
 // for forward compatibility
@@ -75,6 +86,7 @@ type InvoicesServiceServer interface {
 	CreateInvoice(context.Context, *CreateInvoiceRequest) (*CreateInvoiceResponse, error)
 	CheckInvoice(context.Context, *CheckInvoiceRequest) (*CheckInvoiceResponse, error)
 	UpdateInvoice(context.Context, *UpdateInvoiceRequest) (*UpdateInvoiceResponse, error)
+	ListInvoices(context.Context, *ListInvoicesRequest) (*ListInvoicesResponse, error)
 	mustEmbedUnimplementedInvoicesServiceServer()
 }
 
@@ -90,6 +102,9 @@ func (UnimplementedInvoicesServiceServer) CheckInvoice(context.Context, *CheckIn
 }
 func (UnimplementedInvoicesServiceServer) UpdateInvoice(context.Context, *UpdateInvoiceRequest) (*UpdateInvoiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateInvoice not implemented")
+}
+func (UnimplementedInvoicesServiceServer) ListInvoices(context.Context, *ListInvoicesRequest) (*ListInvoicesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListInvoices not implemented")
 }
 func (UnimplementedInvoicesServiceServer) mustEmbedUnimplementedInvoicesServiceServer() {}
 
@@ -158,6 +173,24 @@ func _InvoicesService_UpdateInvoice_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InvoicesService_ListInvoices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInvoicesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvoicesServiceServer).ListInvoices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InvoicesService_ListInvoices_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvoicesServiceServer).ListInvoices(ctx, req.(*ListInvoicesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // InvoicesService_ServiceDesc is the grpc.ServiceDesc for InvoicesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -176,6 +209,10 @@ var InvoicesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateInvoice",
 			Handler:    _InvoicesService_UpdateInvoice_Handler,
+		},
+		{
+			MethodName: "ListInvoices",
+			Handler:    _InvoicesService_ListInvoices_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

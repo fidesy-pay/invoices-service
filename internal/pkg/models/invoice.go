@@ -9,6 +9,7 @@ import (
 
 type Invoice struct {
 	ID        uuid.UUID
+	ClientID  uuid.UUID
 	Amount    float64
 	Chain     string
 	Token     string
@@ -31,4 +32,17 @@ func (i *Invoice) Proto() *desc.Invoice {
 		Address:   i.Address,
 		CreatedAt: timestamppb.New(i.CreatedAt),
 	}
+}
+
+func InvoicesToProto(invoices []*Invoice) []*desc.Invoice {
+	if invoices == nil {
+		return []*desc.Invoice{}
+	}
+
+	result := make([]*desc.Invoice, len(invoices))
+	for i := 0; i < len(invoices); i++ {
+		result[i] = invoices[i].Proto()
+	}
+
+	return result
 }

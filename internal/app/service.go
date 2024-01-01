@@ -17,6 +17,7 @@ type (
 		CreateInvoice(ctx context.Context, req *desc.CreateInvoiceRequest) (*models.Invoice, error)
 		CheckInvoice(ctx context.Context, invoiceID string) (*models.Invoice, error)
 		UpdateInvoice(ctx context.Context, req *desc.UpdateInvoiceRequest) (*models.Invoice, error)
+		ListInvoices(ctx context.Context, reqFilter *desc.ListInvoicesRequest_Filter) ([]*models.Invoice, error)
 	}
 )
 
