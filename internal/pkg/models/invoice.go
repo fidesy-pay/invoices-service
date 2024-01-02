@@ -8,14 +8,15 @@ import (
 )
 
 type Invoice struct {
-	ID        uuid.UUID
-	ClientID  uuid.UUID
-	Amount    float64
-	Chain     string
-	Token     string
-	Status    desc.InvoiceStatus
-	Address   string
-	CreatedAt time.Time
+	ID          uuid.UUID
+	ClientID    uuid.UUID
+	USDAmount   float64
+	TokenAmount float64
+	Chain       string
+	Token       string
+	Status      desc.InvoiceStatus
+	Address     string
+	CreatedAt   time.Time
 }
 
 func (i *Invoice) Proto() *desc.Invoice {
@@ -24,13 +25,15 @@ func (i *Invoice) Proto() *desc.Invoice {
 	}
 
 	return &desc.Invoice{
-		Id:        i.ID.String(),
-		Amount:    i.Amount,
-		Chain:     i.Chain,
-		Token:     i.Token,
-		Status:    i.Status,
-		Address:   i.Address,
-		CreatedAt: timestamppb.New(i.CreatedAt),
+		Id:          i.ID.String(),
+		ClientId:    i.ClientID.String(),
+		UsdAmount:   i.USDAmount,
+		TokenAmount: i.TokenAmount,
+		Chain:       i.Chain,
+		Token:       i.Token,
+		Status:      i.Status,
+		Address:     i.Address,
+		CreatedAt:   timestamppb.New(i.CreatedAt),
 	}
 }
 

@@ -29,7 +29,6 @@ func validateUpdateInvoiceRequest(req *desc.UpdateInvoiceRequest) error {
 	err := validation.ValidateStruct(
 		req,
 		validation.Field(&req.Id, validation.Required, is.UUIDv4),
-		validation.Field(&req.Amount, validation.Required),
 		validation.Field(&req.Chain, validation.Required),
 		validation.Field(&req.Token, validation.Required),
 	)

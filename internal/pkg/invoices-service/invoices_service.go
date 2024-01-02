@@ -8,6 +8,7 @@ import (
 	"github.com/fidesy-pay/invoices-service/internal/pkg/common"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	inmemory "github.com/fidesy-pay/invoices-service/internal/pkg/storage/in-memory"
+	coingecko_api "github.com/fidesy-pay/invoices-service/pkg/coingecko-api"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"github.com/google/uuid"
@@ -18,12 +19,24 @@ import (
 )
 
 type (
+	Service struct {
+		storage             Storage
+		kafkaConsumer       KafkaConsumer
+		cryptoServiceClient CryptoServiceClient
+		coinGeckoAPIClient  CoinGeckoAPIClient
+	}
+
 	KafkaConsumer interface {
 		Consume() <-chan *sarama.ConsumerMessage
 	}
+
 	CryptoServiceClient interface {
 		AcceptCrypto(ctx context.Context, req *crypto_service.AcceptCryptoRequest, opts ...grpc.CallOption) (*crypto_service.AcceptCryptoResponse, error)
 		Transfer(ctx context.Context, in *crypto_service.TransferRequest, opts ...grpc.CallOption) (*crypto_service.TransferResponse, error)
+	}
+
+	CoinGeckoAPIClient interface {
+		GetPrice(ctx context.Context, in *coingecko_api.GetPriceRequest, opts ...grpc.CallOption) (*coingecko_api.GetPriceResponse, error)
 	}
 
 	Storage interface {
@@ -33,22 +46,18 @@ type (
 	}
 )
 
-type Service struct {
-	storage             Storage
-	kafkaConsumer       KafkaConsumer
-	cryptoServiceClient CryptoServiceClient
-}
-
 func New(
 	ctx context.Context,
 	storage Storage,
 	kafkaConsumer KafkaConsumer,
 	cryptoServiceClient CryptoServiceClient,
+	coinGeckoAPIClient CoinGeckoAPIClient,
 ) *Service {
 	service := &Service{
 		storage:             storage,
 		kafkaConsumer:       kafkaConsumer,
 		cryptoServiceClient: cryptoServiceClient,
+		coinGeckoAPIClient:  coinGeckoAPIClient,
 	}
 
 	go service.consumeTransactions(ctx)
@@ -65,6 +74,7 @@ func (s *Service) CreateInvoice(ctx context.Context, req *desc.CreateInvoiceRequ
 	invoice := &models.Invoice{
 		ID:        uuid.New(),
 		ClientID:  clientID,
+		USDAmount: req.GetUsdAmount(),
 		Status:    desc.InvoiceStatus_NEW,
 		CreatedAt: time.Now(),
 	}
@@ -100,7 +110,14 @@ func (s *Service) UpdateInvoice(ctx context.Context, req *desc.UpdateInvoiceRequ
 		return nil, fmt.Errorf("cryptoServiceClient.AcceptCrypto: %w", err)
 	}
 
-	invoice.Amount = req.GetAmount()
+	tokenPriceResp, err := s.coinGeckoAPIClient.GetPrice(ctx, &coingecko_api.GetPriceRequest{
+		Symbol: req.GetToken(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("coinGeckoAPIClient.GetPrice: %w", err)
+	}
+
+	invoice.TokenAmount = invoice.USDAmount / tokenPriceResp.GetPriceUsd()
 	invoice.Chain = req.GetChain()
 	invoice.Token = req.GetToken()
 	invoice.Status = desc.InvoiceStatus_PENDING
@@ -170,8 +187,11 @@ func (s *Service) consumeTransactions(ctx context.Context) {
 }
 
 func (s *Service) processTopicMessage(ctx context.Context, message *sarama.ConsumerMessage) {
-	transaction := new(models.Transaction)
+	if message == nil {
+		return
+	}
 
+	transaction := new(models.Transaction)
 	err := json.Unmarshal(message.Value, &transaction)
 	if err != nil {
 		log.Printf("consumer: json.Unmarshal: %v", err)
@@ -198,7 +218,7 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 		return
 	}
 
-	if transaction.Amount >= invoice.Amount {
+	if transaction.Amount >= invoice.TokenAmount {
 		invoice.Status = desc.InvoiceStatus_SUCCESS
 		_, err = s.storage.UpdateInvoice(ctx, invoice)
 		if err != nil {

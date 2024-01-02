@@ -30,29 +30,16 @@ jobs:
 
       - name: Generate random number
         run: |
-          GRPC_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
-          METRICS_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
-          PROXY_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
-          SWAGGER_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
-          
-          echo "GRPC_PORT=$GRPC_PORT" >> vars.env
-          echo "METRICS_PORT=$METRICS_PORT" >> vars.env
-          echo "PROXY_PORT=$PROXY_PORT" >> vars.env
-          echo "SWAGGER_PORT=$SWAGGER_PORT" >> vars.env
-          echo "PROJECT_NAME=${{ github.event.repository.name }}" >> vars.env
-
-
-      - name: Generate swagger
-        run: |
-          source vars.env
-
-          echo $APP_NAME
-          
-          export GOBIN=~/go/bin
-          export PATH=$PATH:$GOBIN
-          
-          make generate-swagger APP_NAME=$APP_NAME PROXY_PORT=$PROXY_PORT PROJECT_NAME=$PROJECT_NAME
-  
+            GRPC_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+            METRICS_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+            PROXY_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+            SWAGGER_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+            
+            echo "GRPC_PORT=$GRPC_PORT" >> vars.env
+            echo "METRICS_PORT=$METRICS_PORT" >> vars.env
+            echo "PROXY_PORT=$PROXY_PORT" >> vars.env
+            echo "SWAGGER_PORT=$SWAGGER_PORT" >> vars.env
+            echo "PROJECT_NAME=${{ github.event.repository.name }}" >> vars.env
 
   clean:
     runs-on: self-hosted
@@ -72,16 +59,24 @@ jobs:
         run: |
           GOARCH=amd64 GOOS=linux go build -o ./bin/main ./cmd/${{ github.event.repository.name }}
 
-  deploy:
+  run-deps:
     runs-on: self-hosted
     needs: build
+    steps:
+      - name: Docker compose
+        run: docker compose up -d
+
+  deploy:
+    runs-on: self-hosted
+    needs: run-deps
     steps:
       - name: Build and run docker container
         run: |
           source vars.env
           
           docker build --tag $APP_NAME .
-          docker run --name $APP_NAME -d \
+           docker run --name $APP_NAME -d \
+            --restart always \
             --network zoo \
             -e APP_NAME=$APP_NAME \
             -e ENV=STAGING \
@@ -90,22 +85,3 @@ jobs:
             -e PROXY_PORT=$PROXY_PORT -p $PROXY_PORT:$PROXY_PORT \
             -e SWAGGER_PORT=$SWAGGER_PORT -p $SWAGGER_PORT:$SWAGGER_PORT \
              $APP_NAME
-          
-          
-          # Update DNS settings
-          curl --request POST \
-                        --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records \
-                        --header "Content-Type: application/json" \
-                        --header "X-Auth-Email: ${{ secrets.CF_X_AUTH_EMAIL }}" \
-                        --header "X-Auth-Key: ${{ secrets.CF_X_AUTH_KEY }}" \
-                         --data "{\"content\": \"${{ vars.SERVER_HOST }}\",\"name\":\"${APP_NAME}\",\"proxied\": false,\"type\": \"A\",\"comment\": \"Domain verification record\",\"tags\": [],\"ttl\": 3600}"
-          
-          # Update NGINX config
-          export RANDOM_NUMBER=$RANDOM_NUMBER
-          export SERVER_HOST=${{ vars.SERVER_HOST }}
-          export APP_NAME=$APP_NAME
-          export SWAGGER_PORT=$SWAGGER_PORT
-          bash ./scripts/update_nginx.sh
-          
-          echo ""
-          echo "http://"$APP_NAME".fidesy.xyz/docs"

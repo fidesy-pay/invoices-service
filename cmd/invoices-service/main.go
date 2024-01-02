@@ -7,6 +7,7 @@ import (
 	invoicesservice "github.com/fidesy-pay/invoices-service/internal/pkg/invoices-service"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/kafka"
 	in_memory "github.com/fidesy-pay/invoices-service/internal/pkg/storage/in-memory"
+	coingecko_api "github.com/fidesy-pay/invoices-service/pkg/coingecko-api"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	"github.com/fidesyx/platform/pkg/scratch"
 	"log"
@@ -61,7 +62,16 @@ func main() {
 		log.Fatalf("NewCryptoServiceClient: %v", err)
 	}
 
-	invoicesService := invoicesservice.New(ctx, storage, kafkaConsumer, cryptoServiceClient)
+	coinGeckoAPIClient, err := scratch.NewClient[coingecko_api.CoinGeckoAPIClient](
+		ctx,
+		coingecko_api.NewCoinGeckoAPIClient,
+		"external-api",
+	)
+	if err != nil {
+		log.Fatalf("NewCryptoServiceClient: %v", err)
+	}
+
+	invoicesService := invoicesservice.New(ctx, storage, kafkaConsumer, cryptoServiceClient, coinGeckoAPIClient)
 
 	impl := app.New(invoicesService)
 

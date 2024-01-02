@@ -15,16 +15,19 @@ service InvoicesService {
 
 message Invoice {
   string id = 1;
-  double amount = 2;
-  string chain = 3;
-  string token = 4;
-  InvoiceStatus status = 5;
-  string address = 6;
-  google.protobuf.Timestamp created_at = 7;
+  string client_id = 2;
+  double usd_amount = 3;
+  double token_amount = 4;
+  string chain = 5;
+  string token = 6;
+  InvoiceStatus status = 7;
+  string address = 8;
+  google.protobuf.Timestamp created_at = 9;
 }
 
 message CreateInvoiceRequest {
   string client_id = 1;
+  double usd_amount = 2;
 }
 
 message CreateInvoiceResponse {
@@ -51,9 +54,8 @@ message CheckInvoiceResponse {
 
 message UpdateInvoiceRequest {
   string id = 1;
-  double amount = 2;
-  string chain = 3;
-  string token = 4;
+  string chain = 2;
+  string token = 3;
 }
 
 message UpdateInvoiceResponse {

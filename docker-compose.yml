@@ -1,0 +1,22 @@
+version: '3'
+
+networks:
+  zoo:
+    external: true
+
+services:
+  database:
+    container_name: invoices-service-db
+    image: postgres
+    restart: always
+    networks:
+      - zoo
+    volumes:
+      - invoices-service-db-volume:/var/lib/postgresql
+    environment:
+      POSTGRES_USER: invoices_service
+      POSTGRES_PASSWORD: 318wGI9J8i36KljG2IFt
+      POSTGRES_DB: invoices_service
+
+volumes:
+  invoices-service-db-volume:
