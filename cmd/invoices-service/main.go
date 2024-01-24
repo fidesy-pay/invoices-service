@@ -56,7 +56,7 @@ func main() {
 	cryptoServiceClient, err := scratch.NewClient[crypto_service.CryptoServiceClient](
 		ctx,
 		crypto_service.NewCryptoServiceClient,
-		"crypto-service",
+		"fidesy:///crypto-service",
 	)
 	if err != nil {
 		log.Fatalf("NewCryptoServiceClient: %v", err)
@@ -65,7 +65,7 @@ func main() {
 	coinGeckoAPIClient, err := scratch.NewClient[coingecko_api.CoinGeckoAPIClient](
 		ctx,
 		coingecko_api.NewCoinGeckoAPIClient,
-		"external-api",
+		"fidesy:///external-api",
 	)
 	if err != nil {
 		log.Fatalf("NewCryptoServiceClient: %v", err)
