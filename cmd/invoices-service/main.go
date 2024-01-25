@@ -10,6 +10,7 @@ import (
 	coingecko_api "github.com/fidesy-pay/invoices-service/pkg/coingecko-api"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	"github.com/fidesyx/platform/pkg/scratch"
+	"github.com/fidesyx/platform/pkg/scratch/logger"
 	"log"
 	"os"
 	"os/signal"
@@ -37,19 +38,19 @@ func main() {
 
 	err = config.Init()
 	if err != nil {
-		log.Fatalf("config.Init: %v", err)
+		logger.Fatalf("config.Init: %v", err)
 	}
 
 	storage := in_memory.New()
 
 	kafkaConsumer, err := kafka.NewConsumer(ctx, paymentsTopic)
 	if err != nil {
-		log.Fatalf("kafka.NewConsumer: %v", err)
+		logger.Fatalf("kafka.NewConsumer: %v", err)
 	}
 	defer func() {
 		err = kafkaConsumer.Close()
 		if err != nil {
-			log.Fatalf("kafkaConsumer.Close: %v", err)
+			logger.Fatalf("kafkaConsumer.Close: %v", err)
 		}
 	}()
 
@@ -59,7 +60,7 @@ func main() {
 		"fidesy:///crypto-service",
 	)
 	if err != nil {
-		log.Fatalf("NewCryptoServiceClient: %v", err)
+		logger.Fatalf("NewCryptoServiceClient: %v", err)
 	}
 
 	coinGeckoAPIClient, err := scratch.NewClient[coingecko_api.CoinGeckoAPIClient](
@@ -68,7 +69,7 @@ func main() {
 		"fidesy:///external-api",
 	)
 	if err != nil {
-		log.Fatalf("NewCryptoServiceClient: %v", err)
+		logger.Fatalf("NewCryptoServiceClient: %v", err)
 	}
 
 	invoicesService := invoicesservice.New(ctx, storage, kafkaConsumer, cryptoServiceClient, coinGeckoAPIClient)
@@ -76,6 +77,6 @@ func main() {
 	impl := app.New(invoicesService)
 
 	if err = scratchApp.Run(ctx, impl); err != nil {
-		log.Fatalf("app.Run: %v", err)
+		logger.Fatalf("app.Run: %v", err)
 	}
 }

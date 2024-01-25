@@ -1,6 +1,7 @@
-package invoices_service
+package invoicesservice
 
 import (
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 )
@@ -13,4 +14,6 @@ var (
 	ErrInvoiceNotFoundByAddress = func(address string) error {
 		return fmt.Errorf("invoice not found by address = %q", address)
 	}
+
+	ErrInvoiceAlreadyCompleted = errors.New("invoice is already completed")
 )

@@ -1,4 +1,4 @@
-package invoices_service
+package invoicesservice
 
 import (
 	"context"
@@ -11,9 +11,10 @@ import (
 	coingecko_api "github.com/fidesy-pay/invoices-service/pkg/coingecko-api"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
+	"github.com/fidesyx/platform/pkg/scratch/logger"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"log"
 	"strings"
 	"time"
 )
@@ -31,7 +32,7 @@ type (
 	}
 
 	CryptoServiceClient interface {
-		AcceptCrypto(ctx context.Context, req *crypto_service.AcceptCryptoRequest, opts ...grpc.CallOption) (*crypto_service.AcceptCryptoResponse, error)
+		AcceptCrypto(ctx context.Context, in *crypto_service.AcceptCryptoRequest, opts ...grpc.CallOption) (*crypto_service.AcceptCryptoResponse, error)
 		Transfer(ctx context.Context, in *crypto_service.TransferRequest, opts ...grpc.CallOption) (*crypto_service.TransferResponse, error)
 	}
 
@@ -65,20 +66,16 @@ func New(
 	return service
 }
 
-func (s *Service) CreateInvoice(ctx context.Context, req *desc.CreateInvoiceRequest) (*models.Invoice, error) {
-	clientID, err := uuid.Parse(req.GetClientId())
-	if err != nil {
-		return nil, fmt.Errorf("uuid.Parse: %w", err)
-	}
-
+func (s *Service) CreateInvoice(ctx context.Context, input *CreateInvoiceInput) (*models.Invoice, error) {
 	invoice := &models.Invoice{
 		ID:        uuid.New(),
-		ClientID:  clientID,
-		USDAmount: req.GetUsdAmount(),
+		ClientID:  input.ClientID,
+		USDAmount: input.USDAmount,
 		Status:    desc.InvoiceStatus_NEW,
 		CreatedAt: time.Now(),
 	}
 
+	var err error
 	invoice, err = s.storage.CreateInvoice(ctx, invoice)
 	if err != nil {
 		return nil, fmt.Errorf("storage.CreateInvoice: %w", err)
@@ -87,39 +84,38 @@ func (s *Service) CreateInvoice(ctx context.Context, req *desc.CreateInvoiceRequ
 	return invoice, nil
 }
 
-func (s *Service) UpdateInvoice(ctx context.Context, req *desc.UpdateInvoiceRequest) (*models.Invoice, error) {
-	invoiceID, err := uuid.Parse(req.GetId())
-	if err != nil {
-		return nil, fmt.Errorf("uuid.Parse invoiceID: %w", err)
-	}
-
+func (s *Service) UpdateInvoice(ctx context.Context, input *UpdateInvoiceInput) (*models.Invoice, error) {
 	invoices, err := s.storage.ListInvoices(ctx, inmemory.ListInvoicesFilter{
-		IDIn: []uuid.UUID{invoiceID},
+		IDIn: []uuid.UUID{input.InvoiceID},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("storage.ListInvoices: %w", err)
 	}
 	invoice := invoices[0]
 
+	if invoice.Status == desc.InvoiceStatus_SUCCESS {
+		return nil, ErrInvoiceAlreadyCompleted
+	}
+
 	acceptCryptoResp, err := s.cryptoServiceClient.AcceptCrypto(ctx, &crypto_service.AcceptCryptoRequest{
-		InvoiceId: req.GetId(),
-		Chain:     req.GetChain(),
-		Token:     req.GetToken(),
+		InvoiceId: input.InvoiceID.String(),
+		Chain:     input.Chain,
+		Token:     input.Token,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cryptoServiceClient.AcceptCrypto: %w", err)
 	}
 
 	tokenPriceResp, err := s.coinGeckoAPIClient.GetPrice(ctx, &coingecko_api.GetPriceRequest{
-		Symbol: req.GetToken(),
+		Symbol: input.Token,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("coinGeckoAPIClient.GetPrice: %w", err)
 	}
 
 	invoice.TokenAmount = invoice.USDAmount / tokenPriceResp.GetPriceUsd()
-	invoice.Chain = req.GetChain()
-	invoice.Token = req.GetToken()
+	invoice.Chain = input.Chain
+	invoice.Token = input.Token
 	invoice.Status = desc.InvoiceStatus_PENDING
 	invoice.Address = strings.ToLower(acceptCryptoResp.GetAddress())
 
@@ -194,21 +190,28 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 	transaction := new(models.Transaction)
 	err := json.Unmarshal(message.Value, &transaction)
 	if err != nil {
-		log.Printf("consumer: json.Unmarshal: %v", err)
+		logger.Errorf(zap.Error(
+			fmt.Errorf("consumer: json.Unmarshal: %v", err),
+		))
+		return
 	}
 
-	log.Println("New transaction:", transaction)
+	logger.Info("Transaction", zap.ByteString("message", message.Value))
 
 	invoices, err := s.storage.ListInvoices(ctx, inmemory.ListInvoicesFilter{
 		AddressIn: []string{strings.ToLower(transaction.Receiver)},
 	})
 	if err != nil {
-		log.Printf("processTopicMessage: storage.ListInvoices: %v", err)
+		logger.Errorf(zap.Error(
+			fmt.Errorf("processTopicMessage: storage.ListInvoices: %v", err),
+		))
 		return
 	}
 
 	if len(invoices) == 0 {
-		log.Printf("%v", ErrInvoiceNotFoundByAddress(transaction.Receiver))
+		logger.Errorf(zap.Error(
+			fmt.Errorf("%v", ErrInvoiceNotFoundByAddress(transaction.Receiver)),
+		))
 		return
 	}
 
@@ -222,7 +225,9 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 		invoice.Status = desc.InvoiceStatus_SUCCESS
 		_, err = s.storage.UpdateInvoice(ctx, invoice)
 		if err != nil {
-			log.Printf("processTopicMessage: storage.UpdateInvoice: %v", err)
+			logger.Errorf(zap.Error(
+				fmt.Errorf("processTopicMessage: storage.UpdateInvoice: %v", err),
+			))
 			return
 		}
 
@@ -233,10 +238,15 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 			Token:     invoice.Token,
 		})
 		if err != nil {
-			log.Printf("cryptoServiceClient.Transfer: %v", err)
+			logger.Errorf(zap.Error(
+				fmt.Errorf("cryptoServiceClient.Transfer: %v", err),
+			))
 			return
 		}
 
-		log.Println("Transaction hash:", transferResp.TransactionHash)
+		logger.Info(
+			"Transaction hash",
+			zap.String("hash", transferResp.TransactionHash),
+		)
 	}
 }
