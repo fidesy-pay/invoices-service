@@ -55,5 +55,5 @@ generate-swagger:
       ./api/$(PROJECT_NAME)/$(PROJECT_NAME).proto
 
 	mv api/$(PROJECT_NAME)/$(PROJECT_NAME).swagger.json ./swaggerui/swagger_temp.json
-	jq '. + {"host": "$(APP_NAME).fidesy.xyz:$(PROXY_PORT)", "schemes": ["http"]}' ./swaggerui/swagger_temp.json > ./swaggerui/swagger.json
+	jq '. + {"host": "$(SERVER_HOST):$(PROXY_PORT)", "schemes": ["http"]}' ./swaggerui/swagger_temp.json > ./swaggerui/swagger.json
 	rm ./swaggerui/swagger_temp.json

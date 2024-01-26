@@ -8,6 +8,7 @@ on:
 
 jobs:
   prepare:
+    name: Prepare
     runs-on: self-hosted
     steps:
       - name: Checkout code
@@ -28,22 +29,37 @@ jobs:
           echo "APP_NAME=$APP_NAME" >> vars.env
           echo $APP_NAME
 
-      - name: Generate random number
+      - name: Generate swagger
         run: |
-            GRPC_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
-            METRICS_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
-            PROXY_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
-            SWAGGER_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
-            
-            echo "GRPC_PORT=$GRPC_PORT" >> vars.env
-            echo "METRICS_PORT=$METRICS_PORT" >> vars.env
-            echo "PROXY_PORT=$PROXY_PORT" >> vars.env
-            echo "SWAGGER_PORT=$SWAGGER_PORT" >> vars.env
-            echo "PROJECT_NAME=${{ github.event.repository.name }}" >> vars.env
+          PROXY_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+          SWAGGER_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+          
+          echo "PROXY_PORT=$PROXY_PORT" >> vars.env
+          echo "SWAGGER_PORT=$SWAGGER_PORT" >> vars.env
+          
+          # clone swaggerui
+          git clone https://github.com/fidesyx/platform
+          cp -r platform/swaggerui .
+          
+          make generate-swagger SERVER_HOST=${{ vars.SERVER_HOST }} PROXY_PORT=$PROXY_PORT PROJECT_NAME=${{ github.event.repository.name }}  
 
-  clean:
+      - name: Install dependencies
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.1
+
+  tests:
+    name: Unit tests
     runs-on: self-hosted
     needs: prepare
+    steps:
+      - name: Run Unit tests
+        run:
+          go test -v ./...
+
+  clean:
+    name: Clean
+    runs-on: self-hosted
+    needs: tests
     steps:
       - name: Remove container and image
         run: |
@@ -52,6 +68,7 @@ jobs:
           if docker inspect $APP_NAME > /dev/null 2>&1; then docker rm -f $APP_NAME && docker rmi -f $APP_NAME; else echo "Container not found."; fi
 
   build:
+    name: Build
     runs-on: self-hosted
     needs: clean
     steps:
@@ -60,6 +77,7 @@ jobs:
           GOARCH=amd64 GOOS=linux go build -o ./bin/main ./cmd/${{ github.event.repository.name }}
 
   run-deps:
+    name: Run deps
     runs-on: self-hosted
     needs: build
     steps:
@@ -67,6 +85,7 @@ jobs:
         run: docker compose up -d
 
   deploy:
+    name: Deploy
     runs-on: self-hosted
     needs: run-deps
     steps:
@@ -74,8 +93,13 @@ jobs:
         run: |
           source vars.env
           
+          # generate random ports
+          GRPC_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+          METRICS_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+          
           docker build --tag $APP_NAME .
-           docker run --name $APP_NAME -d \
+          
+          docker run --name $APP_NAME -d \
             --restart always \
             --network zoo \
             -e APP_NAME=$APP_NAME \
@@ -85,3 +109,7 @@ jobs:
             -e PROXY_PORT=$PROXY_PORT -p $PROXY_PORT:$PROXY_PORT \
             -e SWAGGER_PORT=$SWAGGER_PORT -p $SWAGGER_PORT:$SWAGGER_PORT \
              $APP_NAME
+          
+          echo http://${{ vars.SERVER_HOST }}:$SWAGGER_PORT/docs
+          
+         

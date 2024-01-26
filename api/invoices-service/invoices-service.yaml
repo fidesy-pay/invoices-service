@@ -4,8 +4,14 @@ config_version: 3
 http:
   rules:
     - selector: invoices_service.InvoicesService.CreateInvoice
-      post: /create-invoice
+      post: /invoices_service.InvoicesService.CreateInvoice
       body: '*'
     - selector: invoices_service.InvoicesService.CheckInvoice
-      post: /check-invoice
+      post: /invoices_service.InvoicesService.CheckInvoice
+      body: '*'
+    - selector: invoices_service.InvoicesService.UpdateInvoice
+      post: /invoices_service.InvoicesService.UpdateInvoice
+      body: '*'
+    - selector: invoices_service.InvoicesService.ListInvoices
+      post: /invoices_service.InvoicesService.ListInvoices
       body: '*'

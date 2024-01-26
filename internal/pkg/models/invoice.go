@@ -8,15 +8,57 @@ import (
 )
 
 type Invoice struct {
-	ID          uuid.UUID
-	ClientID    uuid.UUID
-	USDAmount   float64
-	TokenAmount float64
-	Chain       string
-	Token       string
-	Status      desc.InvoiceStatus
-	Address     string
-	CreatedAt   time.Time
+	ID          uuid.UUID          `db:"id"`
+	ClientID    uuid.UUID          `db:"client_id"`
+	USDAmount   float64            `db:"usd_amount"`
+	TokenAmount *float64           `db:"token_amount"`
+	Chain       string             `db:"chain"`
+	Token       string             `db:"token"`
+	Status      desc.InvoiceStatus `db:"status"`
+	Address     string             `db:"address"`
+	CreatedAt   time.Time          `db:"created_at"`
+}
+
+func (i *Invoice) TableName() string {
+	return "invoices"
+}
+
+func (i *Invoice) ToInsertMap() map[string]interface{} {
+	return map[string]interface{}{
+		"client_id":    i.ClientID.String(),
+		"usd_amount":   i.USDAmount,
+		"token_amount": i.TokenAmount,
+		"chain":        i.Chain,
+		"token":        i.Token,
+		"status":       i.Status,
+		"address":      i.Address,
+	}
+}
+
+func (i *Invoice) ToUpdateMap() map[string]interface{} {
+	updateData := map[string]interface{}{}
+
+	if i.Chain != "" {
+		updateData["chain"] = i.Chain
+	}
+
+	if i.Token != "" {
+		updateData["token"] = i.Token
+	}
+
+	if i.TokenAmount != nil {
+		updateData["token_amount"] = *i.TokenAmount
+	}
+
+	if i.Address != "" {
+		updateData["address"] = i.Address
+	}
+
+	if i.Status != desc.InvoiceStatus_UNKNOWN_STATUS {
+		updateData["status"] = i.Status
+	}
+
+	return updateData
 }
 
 func (i *Invoice) Proto() *desc.Invoice {
@@ -24,17 +66,22 @@ func (i *Invoice) Proto() *desc.Invoice {
 		return nil
 	}
 
-	return &desc.Invoice{
-		Id:          i.ID.String(),
-		ClientId:    i.ClientID.String(),
-		UsdAmount:   i.USDAmount,
-		TokenAmount: i.TokenAmount,
-		Chain:       i.Chain,
-		Token:       i.Token,
-		Status:      i.Status,
-		Address:     i.Address,
-		CreatedAt:   timestamppb.New(i.CreatedAt),
+	invoice := &desc.Invoice{
+		Id:        i.ID.String(),
+		ClientId:  i.ClientID.String(),
+		UsdAmount: i.USDAmount,
+		Chain:     i.Chain,
+		Token:     i.Token,
+		Status:    i.Status,
+		Address:   i.Address,
+		CreatedAt: timestamppb.New(i.CreatedAt),
 	}
+
+	if i.TokenAmount != nil {
+		invoice.TokenAmount = *i.TokenAmount
+	}
+
+	return invoice
 }
 
 func InvoicesToProto(invoices []*Invoice) []*desc.Invoice {

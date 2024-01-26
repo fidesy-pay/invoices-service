@@ -46,6 +46,7 @@ enum InvoiceStatus {
   PENDING = 2;
   FAILED = 3;
   SUCCESS = 4;
+  EXPIRED = 5;
 }
 
 message CheckInvoiceResponse {

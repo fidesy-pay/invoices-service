@@ -10,12 +10,14 @@ import (
 
 const (
 	KafkaBrokers = "kafka-brokers"
+	PgDsn        = "pg-dsn"
 )
 
 var conf *Config
 
 type Config struct {
 	KafkaBrokers string `yaml:"kafka-brokers"`
+	PgDsn        string `yaml:"pg-dsn"`
 }
 
 func Init() error {
@@ -34,6 +36,8 @@ func Get(key string) interface{} {
 	switch key {
 	case KafkaBrokers:
 		return strings.Split(conf.KafkaBrokers, ",")
+	case PgDsn:
+		return conf.PgDsn
 	default:
 		panic(ErrConfigNotFoundByKey(key))
 	}

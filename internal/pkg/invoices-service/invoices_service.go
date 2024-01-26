@@ -7,7 +7,7 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/common"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
-	inmemory "github.com/fidesy-pay/invoices-service/internal/pkg/storage/in-memory"
+	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
 	coingecko_api "github.com/fidesy-pay/invoices-service/pkg/coingecko-api"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
@@ -41,9 +41,9 @@ type (
 	}
 
 	Storage interface {
-		CreateInvoice(ctx context.Context, payment *models.Invoice) (*models.Invoice, error)
-		ListInvoices(ctx context.Context, filter inmemory.ListInvoicesFilter) ([]*models.Invoice, error)
-		UpdateInvoice(ctx context.Context, payment *models.Invoice) (*models.Invoice, error)
+		CreateInvoice(ctx context.Context, invoice *models.Invoice) (*models.Invoice, error)
+		ListInvoices(ctx context.Context, filter storage.ListInvoicesFilter) ([]*models.Invoice, error)
+		UpdateInvoice(ctx context.Context, invoice *models.Invoice) (*models.Invoice, error)
 	}
 )
 
@@ -85,12 +85,16 @@ func (s *Service) CreateInvoice(ctx context.Context, input *CreateInvoiceInput) 
 }
 
 func (s *Service) UpdateInvoice(ctx context.Context, input *UpdateInvoiceInput) (*models.Invoice, error) {
-	invoices, err := s.storage.ListInvoices(ctx, inmemory.ListInvoicesFilter{
+	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
 		IDIn: []uuid.UUID{input.InvoiceID},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("storage.ListInvoices: %w", err)
 	}
+	if len(invoices) == 0 {
+		return nil, ErrInvoiceNotFoundByID(input.InvoiceID)
+	}
+
 	invoice := invoices[0]
 
 	if invoice.Status == desc.InvoiceStatus_SUCCESS {
@@ -113,7 +117,8 @@ func (s *Service) UpdateInvoice(ctx context.Context, input *UpdateInvoiceInput) 
 		return nil, fmt.Errorf("coinGeckoAPIClient.GetPrice: %w", err)
 	}
 
-	invoice.TokenAmount = invoice.USDAmount / tokenPriceResp.GetPriceUsd()
+	tokenAmount := invoice.USDAmount / tokenPriceResp.GetPriceUsd()
+	invoice.TokenAmount = &tokenAmount
 	invoice.Chain = input.Chain
 	invoice.Token = input.Token
 	invoice.Status = desc.InvoiceStatus_PENDING
@@ -131,7 +136,7 @@ func (s *Service) CheckInvoice(ctx context.Context, invoiceIDStr string) (*model
 	// we validate ID in handler logic
 	invoiceID := uuid.MustParse(invoiceIDStr)
 
-	invoices, err := s.storage.ListInvoices(ctx, inmemory.ListInvoicesFilter{
+	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
 		IDIn: []uuid.UUID{invoiceID},
 	})
 	if err != nil {
@@ -148,7 +153,7 @@ func (s *Service) CheckInvoice(ctx context.Context, invoiceIDStr string) (*model
 func (s *Service) ListInvoices(ctx context.Context, reqFilter *desc.ListInvoicesRequest_Filter) ([]*models.Invoice, error) {
 	var err error
 
-	filter := inmemory.ListInvoicesFilter{}
+	filter := storage.ListInvoicesFilter{}
 	if len(reqFilter.ClientIdIn) > 0 {
 		filter.ClientIDIn, err = common.ConvertToUUIDs(reqFilter.GetClientIdIn())
 		if err != nil {
@@ -198,7 +203,7 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 
 	logger.Info("Transaction", zap.ByteString("message", message.Value))
 
-	invoices, err := s.storage.ListInvoices(ctx, inmemory.ListInvoicesFilter{
+	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
 		AddressIn: []string{strings.ToLower(transaction.Receiver)},
 	})
 	if err != nil {
@@ -221,7 +226,7 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 		return
 	}
 
-	if transaction.Amount >= invoice.TokenAmount {
+	if transaction.Amount >= *invoice.TokenAmount {
 		invoice.Status = desc.InvoiceStatus_SUCCESS
 		_, err = s.storage.UpdateInvoice(ctx, invoice)
 		if err != nil {

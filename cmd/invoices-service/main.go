@@ -6,11 +6,13 @@ import (
 	"github.com/fidesy-pay/invoices-service/internal/config"
 	invoicesservice "github.com/fidesy-pay/invoices-service/internal/pkg/invoices-service"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/kafka"
-	in_memory "github.com/fidesy-pay/invoices-service/internal/pkg/storage/in-memory"
+	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
 	coingecko_api "github.com/fidesy-pay/invoices-service/pkg/coingecko-api"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
+	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"github.com/fidesyx/platform/pkg/scratch"
 	"github.com/fidesyx/platform/pkg/scratch/logger"
+	postgres "github.com/fidesyx/platform/pkg/scratch/storage"
 	"log"
 	"os"
 	"os/signal"
@@ -41,8 +43,6 @@ func main() {
 		logger.Fatalf("config.Init: %v", err)
 	}
 
-	storage := in_memory.New()
-
 	kafkaConsumer, err := kafka.NewConsumer(ctx, paymentsTopic)
 	if err != nil {
 		logger.Fatalf("kafka.NewConsumer: %v", err)
@@ -72,9 +72,23 @@ func main() {
 		logger.Fatalf("NewCryptoServiceClient: %v", err)
 	}
 
+	pool, err := postgres.Connect(ctx, config.Get(config.PgDsn).(string))
+	if err != nil {
+		logger.Fatalf("postgres.Connect: %v", err)
+	}
+
+	storage := storage.New(pool)
+
 	invoicesService := invoicesservice.New(ctx, storage, kafkaConsumer, cryptoServiceClient, coinGeckoAPIClient)
 
 	impl := app.New(invoicesService)
+
+	// register reverse http proxy
+	reverseProxyRouter := scratch.ReverseProxyRouter()
+	err = desc.RegisterInvoicesServiceHandlerServer(ctx, reverseProxyRouter, impl)
+	if err != nil {
+		logger.Fatalf("RegisterInvoicesServiceHandlerServer: %v", err)
+	}
 
 	if err = scratchApp.Run(ctx, impl); err != nil {
 		logger.Fatalf("app.Run: %v", err)
