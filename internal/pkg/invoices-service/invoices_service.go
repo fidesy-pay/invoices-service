@@ -13,6 +13,7 @@ import (
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"github.com/fidesy/sdk/common/logger"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"strings"
@@ -33,6 +34,7 @@ type (
 
 	CryptoServiceClient interface {
 		AcceptCrypto(ctx context.Context, in *crypto_service.AcceptCryptoRequest, opts ...grpc.CallOption) (*crypto_service.AcceptCryptoResponse, error)
+		CancelAcceptingCrypto(ctx context.Context, in *crypto_service.CancelAcceptingCryptoRequest, opts ...grpc.CallOption) (*crypto_service.CancelAcceptingCryptoResponse, error)
 		Transfer(ctx context.Context, in *crypto_service.TransferRequest, opts ...grpc.CallOption) (*crypto_service.TransferResponse, error)
 	}
 
@@ -62,6 +64,7 @@ func New(
 	}
 
 	go service.consumeTransactions(ctx)
+	go service.cleanExpiredInvoicesWorker(ctx)
 
 	return service
 }
@@ -192,17 +195,15 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 		return
 	}
 
-	transaction := new(models.Transaction)
-	err := json.Unmarshal(message.Value, &transaction)
+	wallet := new(models.Wallet)
+	err := json.Unmarshal(message.Value, &wallet)
 	if err != nil {
 		logger.Errorf("consumer: json.Unmarshal: %v", err)
 		return
 	}
 
-	logger.Info("Transaction", zap.ByteString("message", message.Value))
-
 	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
-		AddressIn: []string{strings.ToLower(transaction.Receiver)},
+		AddressIn: []string{strings.ToLower(wallet.Address)},
 	})
 	if err != nil {
 		logger.Errorf("processTopicMessage: storage.ListInvoices: %v", err)
@@ -210,17 +211,16 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 	}
 
 	if len(invoices) == 0 {
-		logger.Errorf("%v", ErrInvoiceNotFoundByAddress(transaction.Receiver))
+		logger.Errorf("%v", ErrInvoiceNotFoundByAddress(wallet.Address))
 		return
 	}
 
 	invoice := invoices[0]
-
-	if transaction.Chain != invoice.Chain || transaction.Token != invoice.Token {
+	if wallet.Chain != invoice.Chain || wallet.Token != invoice.Token {
 		return
 	}
 
-	if transaction.Amount >= *invoice.TokenAmount {
+	if wallet.Balance >= int64(*invoice.TokenAmount*1e18) {
 		invoice.Status = desc.InvoiceStatus_SUCCESS
 		_, err = s.storage.UpdateInvoice(ctx, invoice)
 		if err != nil {
@@ -228,11 +228,17 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 			return
 		}
 
+		_, err = s.cryptoServiceClient.CancelAcceptingCrypto(ctx, &crypto_service.CancelAcceptingCryptoRequest{
+			Address: wallet.Address,
+			Chain:   wallet.Chain,
+		})
+		if err != nil {
+			logger.Errorf("cryptoServiceClient.StopAcceptingCrypto: %w", err)
+		}
+
 		transferResp, err := s.cryptoServiceClient.Transfer(ctx, &crypto_service.TransferRequest{
 			ClientId:  invoice.ClientID.String(),
 			InvoiceId: invoice.ID.String(),
-			Chain:     invoice.Chain,
-			Token:     invoice.Token,
 		})
 		if err != nil {
 			logger.Errorf("cryptoServiceClient.Transfer: %v", err)
@@ -243,5 +249,50 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 			"Transaction hash",
 			zap.String("hash", transferResp.TransactionHash),
 		)
+
+	}
+}
+
+func (s *Service) cleanExpiredInvoicesWorker(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.Tick(5 * time.Second):
+			go s.cleanExpiredInvoices(ctx)
+		}
+	}
+}
+
+func (s *Service) cleanExpiredInvoices(ctx context.Context) {
+	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
+		StatusIn:    []desc.InvoiceStatus{desc.InvoiceStatus_NEW, desc.InvoiceStatus_PENDING},
+		CreatedAtLt: lo.ToPtr(time.Now().Add(-20 * time.Minute)),
+	})
+	if err != nil {
+		logger.Errorf("cleanExpiredInvoices: storage.ListInvoices: %w", err)
+		return
+	}
+
+	for _, invoice := range invoices {
+		invoice.Status = desc.InvoiceStatus_EXPIRED
+		_, err = s.storage.UpdateInvoice(ctx, invoice)
+		if err != nil {
+			logger.Errorf("cleanExpiredInvoices: storage.UpdateInvoice: %w", err)
+			continue
+		}
+
+		if invoice.Address == "" {
+			continue
+		}
+
+		_, err = s.cryptoServiceClient.CancelAcceptingCrypto(ctx, &crypto_service.CancelAcceptingCryptoRequest{
+			Address: invoice.Address,
+			Chain:   invoice.Chain,
+		})
+		if err != nil {
+			logger.Errorf("cleanExpiredInvoices: cryptoServiceClient.StopAcceptingCrypto: %w", err)
+			continue
+		}
 	}
 }

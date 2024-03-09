@@ -19,8 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	CryptoService_AcceptCrypto_FullMethodName = "/crypto_service.CryptoService/AcceptCrypto"
-	CryptoService_Transfer_FullMethodName     = "/crypto_service.CryptoService/Transfer"
+	CryptoService_AcceptCrypto_FullMethodName          = "/crypto_service.CryptoService/AcceptCrypto"
+	CryptoService_CancelAcceptingCrypto_FullMethodName = "/crypto_service.CryptoService/CancelAcceptingCrypto"
+	CryptoService_Transfer_FullMethodName              = "/crypto_service.CryptoService/Transfer"
+	CryptoService_CreateWallet_FullMethodName          = "/crypto_service.CryptoService/CreateWallet"
+	CryptoService_ListWallets_FullMethodName           = "/crypto_service.CryptoService/ListWallets"
+	CryptoService_GetBalance_FullMethodName            = "/crypto_service.CryptoService/GetBalance"
 )
 
 // CryptoServiceClient is the client API for CryptoService service.
@@ -28,7 +32,11 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CryptoServiceClient interface {
 	AcceptCrypto(ctx context.Context, in *AcceptCryptoRequest, opts ...grpc.CallOption) (*AcceptCryptoResponse, error)
+	CancelAcceptingCrypto(ctx context.Context, in *CancelAcceptingCryptoRequest, opts ...grpc.CallOption) (*CancelAcceptingCryptoResponse, error)
 	Transfer(ctx context.Context, in *TransferRequest, opts ...grpc.CallOption) (*TransferResponse, error)
+	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*Wallet, error)
+	ListWallets(ctx context.Context, in *ListWalletsRequest, opts ...grpc.CallOption) (*ListWalletsResponse, error)
+	GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*GetBalanceResponse, error)
 }
 
 type cryptoServiceClient struct {
@@ -48,9 +56,45 @@ func (c *cryptoServiceClient) AcceptCrypto(ctx context.Context, in *AcceptCrypto
 	return out, nil
 }
 
+func (c *cryptoServiceClient) CancelAcceptingCrypto(ctx context.Context, in *CancelAcceptingCryptoRequest, opts ...grpc.CallOption) (*CancelAcceptingCryptoResponse, error) {
+	out := new(CancelAcceptingCryptoResponse)
+	err := c.cc.Invoke(ctx, CryptoService_CancelAcceptingCrypto_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *cryptoServiceClient) Transfer(ctx context.Context, in *TransferRequest, opts ...grpc.CallOption) (*TransferResponse, error) {
 	out := new(TransferResponse)
 	err := c.cc.Invoke(ctx, CryptoService_Transfer_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cryptoServiceClient) CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*Wallet, error) {
+	out := new(Wallet)
+	err := c.cc.Invoke(ctx, CryptoService_CreateWallet_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cryptoServiceClient) ListWallets(ctx context.Context, in *ListWalletsRequest, opts ...grpc.CallOption) (*ListWalletsResponse, error) {
+	out := new(ListWalletsResponse)
+	err := c.cc.Invoke(ctx, CryptoService_ListWallets_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cryptoServiceClient) GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*GetBalanceResponse, error) {
+	out := new(GetBalanceResponse)
+	err := c.cc.Invoke(ctx, CryptoService_GetBalance_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +106,11 @@ func (c *cryptoServiceClient) Transfer(ctx context.Context, in *TransferRequest,
 // for forward compatibility
 type CryptoServiceServer interface {
 	AcceptCrypto(context.Context, *AcceptCryptoRequest) (*AcceptCryptoResponse, error)
+	CancelAcceptingCrypto(context.Context, *CancelAcceptingCryptoRequest) (*CancelAcceptingCryptoResponse, error)
 	Transfer(context.Context, *TransferRequest) (*TransferResponse, error)
+	CreateWallet(context.Context, *CreateWalletRequest) (*Wallet, error)
+	ListWallets(context.Context, *ListWalletsRequest) (*ListWalletsResponse, error)
+	GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error)
 	mustEmbedUnimplementedCryptoServiceServer()
 }
 
@@ -73,8 +121,20 @@ type UnimplementedCryptoServiceServer struct {
 func (UnimplementedCryptoServiceServer) AcceptCrypto(context.Context, *AcceptCryptoRequest) (*AcceptCryptoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AcceptCrypto not implemented")
 }
+func (UnimplementedCryptoServiceServer) CancelAcceptingCrypto(context.Context, *CancelAcceptingCryptoRequest) (*CancelAcceptingCryptoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelAcceptingCrypto not implemented")
+}
 func (UnimplementedCryptoServiceServer) Transfer(context.Context, *TransferRequest) (*TransferResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Transfer not implemented")
+}
+func (UnimplementedCryptoServiceServer) CreateWallet(context.Context, *CreateWalletRequest) (*Wallet, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateWallet not implemented")
+}
+func (UnimplementedCryptoServiceServer) ListWallets(context.Context, *ListWalletsRequest) (*ListWalletsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWallets not implemented")
+}
+func (UnimplementedCryptoServiceServer) GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBalance not implemented")
 }
 func (UnimplementedCryptoServiceServer) mustEmbedUnimplementedCryptoServiceServer() {}
 
@@ -107,6 +167,24 @@ func _CryptoService_AcceptCrypto_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CryptoService_CancelAcceptingCrypto_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelAcceptingCryptoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CryptoServiceServer).CancelAcceptingCrypto(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CryptoService_CancelAcceptingCrypto_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CryptoServiceServer).CancelAcceptingCrypto(ctx, req.(*CancelAcceptingCryptoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CryptoService_Transfer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(TransferRequest)
 	if err := dec(in); err != nil {
@@ -125,6 +203,60 @@ func _CryptoService_Transfer_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CryptoService_CreateWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CryptoServiceServer).CreateWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CryptoService_CreateWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CryptoServiceServer).CreateWallet(ctx, req.(*CreateWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CryptoService_ListWallets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWalletsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CryptoServiceServer).ListWallets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CryptoService_ListWallets_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CryptoServiceServer).ListWallets(ctx, req.(*ListWalletsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CryptoService_GetBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBalanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CryptoServiceServer).GetBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CryptoService_GetBalance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CryptoServiceServer).GetBalance(ctx, req.(*GetBalanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CryptoService_ServiceDesc is the grpc.ServiceDesc for CryptoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -137,8 +269,24 @@ var CryptoService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CryptoService_AcceptCrypto_Handler,
 		},
 		{
+			MethodName: "CancelAcceptingCrypto",
+			Handler:    _CryptoService_CancelAcceptingCrypto_Handler,
+		},
+		{
 			MethodName: "Transfer",
 			Handler:    _CryptoService_Transfer_Handler,
+		},
+		{
+			MethodName: "CreateWallet",
+			Handler:    _CryptoService_CreateWallet_Handler,
+		},
+		{
+			MethodName: "ListWallets",
+			Handler:    _CryptoService_ListWallets_Handler,
+		},
+		{
+			MethodName: "GetBalance",
+			Handler:    _CryptoService_GetBalance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

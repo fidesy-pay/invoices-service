@@ -7,13 +7,15 @@ import (
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"github.com/google/uuid"
+	"time"
 )
 
 type ListInvoicesFilter struct {
-	IDIn       []uuid.UUID
-	AddressIn  []string
-	ClientIDIn []uuid.UUID
-	StatusIn   []desc.InvoiceStatus
+	IDIn        []uuid.UUID
+	AddressIn   []string
+	ClientIDIn  []uuid.UUID
+	StatusIn    []desc.InvoiceStatus
+	CreatedAtLt *time.Time
 }
 
 func (s *Storage) ListInvoices(ctx context.Context, filter ListInvoicesFilter) ([]*models.Invoice, error) {
@@ -21,6 +23,10 @@ func (s *Storage) ListInvoices(ctx context.Context, filter ListInvoicesFilter) (
 		Select(invoiceFields).
 		From(invoicesTable)
 
+	// does not show expired invoices
+	query = query.Where(sq.NotEq{
+		"status": desc.InvoiceStatus_EXPIRED,
+	})
 	if len(filter.IDIn) > 0 {
 		query = query.Where(sq.Eq{
 			"id": filter.IDIn,
@@ -42,6 +48,12 @@ func (s *Storage) ListInvoices(ctx context.Context, filter ListInvoicesFilter) (
 	if len(filter.StatusIn) > 0 {
 		query = query.Where(sq.Eq{
 			"status": filter.StatusIn,
+		})
+	}
+
+	if filter.CreatedAtLt != nil {
+		query = query.Where(sq.Lt{
+			"created_at": filter.CreatedAtLt,
 		})
 	}
 
