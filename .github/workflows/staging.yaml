@@ -31,17 +31,18 @@ jobs:
 
       - name: Generate swagger
         run: |
-          PROXY_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
-          SWAGGER_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
-          
-          echo "PROXY_PORT=$PROXY_PORT" >> vars.env
-          echo "SWAGGER_PORT=$SWAGGER_PORT" >> vars.env
-          
-          # clone swaggerui
-          git clone https://github.com/fidesyx/platform
-          cp -r platform/swaggerui .
-          
-          make generate-swagger SERVER_HOST=${{ vars.SERVER_HOST }} PROXY_PORT=$PROXY_PORT PROJECT_NAME=${{ github.event.repository.name }}  
+          ls
+#          PROXY_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+#          SWAGGER_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+#
+#          echo "PROXY_PORT=$PROXY_PORT" >> vars.env
+#          echo "SWAGGER_PORT=$SWAGGER_PORT" >> vars.env
+#
+#          # clone swaggerui
+#          git clone https://github.com/fidesyx/platform
+#          cp -r platform/swaggerui .
+#
+#          make generate-swagger SERVER_HOST=${{ vars.SERVER_HOST }} PROXY_PORT=$PROXY_PORT PROJECT_NAME=${{ github.event.repository.name }}
 
       - name: Install dependencies
         run: |
@@ -76,18 +77,10 @@ jobs:
         run: |
           GOARCH=amd64 GOOS=linux go build -o ./bin/main ./cmd/${{ github.event.repository.name }}
 
-  run-deps:
-    name: Run deps
-    runs-on: self-hosted
-    needs: build
-    steps:
-      - name: Docker compose
-        run: docker compose up -d
-
   deploy:
     name: Deploy
     runs-on: self-hosted
-    needs: run-deps
+    needs: build
     steps:
       - name: Build and run docker container
         run: |
@@ -106,8 +99,6 @@ jobs:
             -e ENV=STAGING \
             -e GRPC_PORT=$GRPC_PORT -p $GRPC_PORT:$GRPC_PORT \
             -e METRICS_PORT=$METRICS_PORT -p $METRICS_PORT:$METRICS_PORT \
-            -e PROXY_PORT=$PROXY_PORT -p $PROXY_PORT:$PROXY_PORT \
-            -e SWAGGER_PORT=$SWAGGER_PORT -p $SWAGGER_PORT:$SWAGGER_PORT \
              $APP_NAME
           
           echo http://${{ vars.SERVER_HOST }}:$SWAGGER_PORT/docs

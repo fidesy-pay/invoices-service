@@ -11,7 +11,7 @@ import (
 	coingecko_api "github.com/fidesy-pay/invoices-service/pkg/coingecko-api"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
-	"github.com/fidesyx/platform/pkg/scratch/logger"
+	"github.com/fidesy/sdk/common/logger"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -195,9 +195,7 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 	transaction := new(models.Transaction)
 	err := json.Unmarshal(message.Value, &transaction)
 	if err != nil {
-		logger.Errorf(zap.Error(
-			fmt.Errorf("consumer: json.Unmarshal: %v", err),
-		))
+		logger.Errorf("consumer: json.Unmarshal: %v", err)
 		return
 	}
 
@@ -207,16 +205,12 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 		AddressIn: []string{strings.ToLower(transaction.Receiver)},
 	})
 	if err != nil {
-		logger.Errorf(zap.Error(
-			fmt.Errorf("processTopicMessage: storage.ListInvoices: %v", err),
-		))
+		logger.Errorf("processTopicMessage: storage.ListInvoices: %v", err)
 		return
 	}
 
 	if len(invoices) == 0 {
-		logger.Errorf(zap.Error(
-			fmt.Errorf("%v", ErrInvoiceNotFoundByAddress(transaction.Receiver)),
-		))
+		logger.Errorf("%v", ErrInvoiceNotFoundByAddress(transaction.Receiver))
 		return
 	}
 
@@ -230,9 +224,7 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 		invoice.Status = desc.InvoiceStatus_SUCCESS
 		_, err = s.storage.UpdateInvoice(ctx, invoice)
 		if err != nil {
-			logger.Errorf(zap.Error(
-				fmt.Errorf("processTopicMessage: storage.UpdateInvoice: %v", err),
-			))
+			logger.Errorf("processTopicMessage: storage.UpdateInvoice: %v", err)
 			return
 		}
 
@@ -243,9 +235,7 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 			Token:     invoice.Token,
 		})
 		if err != nil {
-			logger.Errorf(zap.Error(
-				fmt.Errorf("cryptoServiceClient.Transfer: %v", err),
-			))
+			logger.Errorf("cryptoServiceClient.Transfer: %v", err)
 			return
 		}
 

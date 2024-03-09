@@ -5,32 +5,20 @@ networks:
     external: true
 
 services:
-  database-stg:
-    container_name: invoices-service-db-stg
+  database-local:
+    container_name: invoices-service-db-local
     image: postgres
     restart: always
     networks:
       - zoo
     volumes:
-      - invoices-service-db-stg-volume:/var/lib/postgresql
+      - invoices-service-db-local-volume:/var/lib/postgresql
+    ports:
+      - "45001:5432"
     environment:
       POSTGRES_USER: invoices-service
-      POSTGRES_PASSWORD: XF3UJzDZlh7c7Tbh65dL
-      POSTGRES_DB: invoices-service
-
-  database-prod:
-    container_name: invoices-service-db-prod
-    image: postgres
-    restart: always
-    networks:
-        - zoo
-    volumes:
-      - invoices-service-db-prod-volume:/var/lib/postgresql
-    environment:
-      POSTGRES_USER: invoices-service
-      POSTGRES_PASSWORD: rziWXz6RgGu0nlHAAYx6
+      POSTGRES_PASSWORD: invoices-service
       POSTGRES_DB: invoices-service
 
 volumes:
-  invoices-service-db-stg-volume:
-  invoices-service-db-prod-volume:
+  invoices-service-db-local-volume:
