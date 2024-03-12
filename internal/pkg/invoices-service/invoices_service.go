@@ -71,11 +71,11 @@ func New(
 
 func (s *Service) CreateInvoice(ctx context.Context, input *CreateInvoiceInput) (*models.Invoice, error) {
 	invoice := &models.Invoice{
-		ID:        uuid.New(),
-		ClientID:  input.ClientID,
-		USDAmount: input.USDAmount,
-		Status:    desc.InvoiceStatus_NEW,
-		CreatedAt: time.Now(),
+		ID:             uuid.New(),
+		ClientID:       input.ClientID,
+		UsdCentsAmount: input.UsdCentsAmount,
+		Status:         desc.InvoiceStatus_NEW,
+		CreatedAt:      time.Now(),
 	}
 
 	var err error
@@ -120,7 +120,7 @@ func (s *Service) UpdateInvoice(ctx context.Context, input *UpdateInvoiceInput) 
 		return nil, fmt.Errorf("coinGeckoAPIClient.GetPrice: %w", err)
 	}
 
-	tokenAmount := invoice.USDAmount / tokenPriceResp.GetPriceUsd()
+	tokenAmount := float64(invoice.UsdCentsAmount) / (100 * tokenPriceResp.GetPriceUsd())
 	invoice.TokenAmount = &tokenAmount
 	invoice.Chain = input.Chain
 	invoice.Token = input.Token
@@ -233,7 +233,7 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 			Chain:   wallet.Chain,
 		})
 		if err != nil {
-			logger.Errorf("cryptoServiceClient.StopAcceptingCrypto: %w", err)
+			logger.Errorf("cryptoServiceClient.CancelAcceptingCrypto: %w", err)
 		}
 
 		transferResp, err := s.cryptoServiceClient.Transfer(ctx, &crypto_service.TransferRequest{
@@ -291,7 +291,7 @@ func (s *Service) cleanExpiredInvoices(ctx context.Context) {
 			Chain:   invoice.Chain,
 		})
 		if err != nil {
-			logger.Errorf("cleanExpiredInvoices: cryptoServiceClient.StopAcceptingCrypto: %w", err)
+			logger.Errorf("cleanExpiredInvoices: cryptoServiceClient.CancelAcceptingCrypto: %w", err)
 			continue
 		}
 	}

@@ -8,15 +8,15 @@ import (
 )
 
 type Invoice struct {
-	ID          uuid.UUID          `db:"id"`
-	ClientID    uuid.UUID          `db:"client_id"`
-	USDAmount   float64            `db:"usd_amount"`
-	TokenAmount *float64           `db:"token_amount"`
-	Chain       string             `db:"chain"`
-	Token       string             `db:"token"`
-	Status      desc.InvoiceStatus `db:"status"`
-	Address     string             `db:"address"`
-	CreatedAt   time.Time          `db:"created_at"`
+	ID             uuid.UUID          `db:"id"`
+	ClientID       uuid.UUID          `db:"client_id"`
+	UsdCentsAmount int64              `db:"usd_cents_amount"`
+	TokenAmount    *float64           `db:"token_amount"`
+	Chain          string             `db:"chain"`
+	Token          string             `db:"token"`
+	Status         desc.InvoiceStatus `db:"status"`
+	Address        string             `db:"address"`
+	CreatedAt      time.Time          `db:"created_at"`
 }
 
 func (i *Invoice) TableName() string {
@@ -25,13 +25,13 @@ func (i *Invoice) TableName() string {
 
 func (i *Invoice) ToInsertMap() map[string]interface{} {
 	return map[string]interface{}{
-		"client_id":    i.ClientID.String(),
-		"usd_amount":   i.USDAmount,
-		"token_amount": i.TokenAmount,
-		"chain":        i.Chain,
-		"token":        i.Token,
-		"status":       i.Status,
-		"address":      i.Address,
+		"client_id":        i.ClientID.String(),
+		"usd_cents_amount": i.UsdCentsAmount,
+		"token_amount":     i.TokenAmount,
+		"chain":            i.Chain,
+		"token":            i.Token,
+		"status":           i.Status,
+		"address":          i.Address,
 	}
 }
 
@@ -69,7 +69,7 @@ func (i *Invoice) Proto() *desc.Invoice {
 	invoice := &desc.Invoice{
 		Id:        i.ID.String(),
 		ClientId:  i.ClientID.String(),
-		UsdAmount: i.USDAmount,
+		UsdAmount: float64(i.UsdCentsAmount) / 100,
 		Chain:     i.Chain,
 		Token:     i.Token,
 		Status:    i.Status,

@@ -1,2 +1,2 @@
 kafka-brokers: crypto-payments-kafka:9093
-pg-dsn: postgres://invoices-service:invoices-service@invoices-service-db-local/invoices-service?sslmode=disable
+pg-dsn: postgres://invoices-service:invoices-service@invoices-service-db-test/invoices-service?sslmode=disable

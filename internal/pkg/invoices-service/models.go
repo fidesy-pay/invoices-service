@@ -8,8 +8,8 @@ import (
 )
 
 type CreateInvoiceInput struct {
-	ClientID  uuid.UUID
-	USDAmount float64
+	ClientID       uuid.UUID
+	UsdCentsAmount int64
 }
 
 func CreateInvoiceInputFromRequest(req *desc.CreateInvoiceRequest) (*CreateInvoiceInput, error) {
@@ -23,8 +23,8 @@ func CreateInvoiceInputFromRequest(req *desc.CreateInvoiceRequest) (*CreateInvoi
 	}
 
 	return &CreateInvoiceInput{
-		ClientID:  uuid.MustParse(req.GetClientId()),
-		USDAmount: req.GetUsdAmount(),
+		ClientID:       uuid.MustParse(req.GetClientId()),
+		UsdCentsAmount: int64(req.GetUsdAmount() * 100),
 	}, nil
 }
 

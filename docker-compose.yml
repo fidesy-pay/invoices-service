@@ -5,14 +5,14 @@ networks:
     external: true
 
 services:
-  database-local:
-    container_name: invoices-service-db-local
+  database-test:
+    container_name: invoices-service-db-test
     image: postgres
     restart: always
     networks:
       - zoo
     volumes:
-      - invoices-service-db-local-volume:/var/lib/postgresql
+      - invoices-service-db-test-volume:/var/lib/postgresql
     ports:
       - "45001:5432"
     environment:
@@ -21,4 +21,4 @@ services:
       POSTGRES_DB: invoices-service
 
 volumes:
-  invoices-service-db-local-volume:
+  invoices-service-db-test-volume:

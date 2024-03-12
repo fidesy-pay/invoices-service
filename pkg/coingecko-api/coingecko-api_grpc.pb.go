@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v4.24.3
-// source: api/external-api/coingecko-api.proto
+// source: api/coingecko-api/coingecko-api.proto
 
 package coingecko_api
 
@@ -105,5 +105,5 @@ var CoinGeckoAPI_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/external-api/coingecko-api.proto",
+	Metadata: "api/coingecko-api/coingecko-api.proto",
 }
