@@ -229,8 +229,7 @@ func (s *Service) processTopicMessage(ctx context.Context, message *sarama.Consu
 		}
 
 		_, err = s.cryptoServiceClient.CancelAcceptingCrypto(ctx, &crypto_service.CancelAcceptingCryptoRequest{
-			Address: wallet.Address,
-			Chain:   wallet.Chain,
+			InvoiceId: invoice.ID.String(),
 		})
 		if err != nil {
 			logger.Errorf("cryptoServiceClient.CancelAcceptingCrypto: %w", err)
@@ -287,8 +286,7 @@ func (s *Service) cleanExpiredInvoices(ctx context.Context) {
 		}
 
 		_, err = s.cryptoServiceClient.CancelAcceptingCrypto(ctx, &crypto_service.CancelAcceptingCryptoRequest{
-			Address: invoice.Address,
-			Chain:   invoice.Chain,
+			InvoiceId: invoice.ID.String(),
 		})
 		if err != nil {
 			logger.Errorf("cleanExpiredInvoices: cryptoServiceClient.CancelAcceptingCrypto: %w", err)

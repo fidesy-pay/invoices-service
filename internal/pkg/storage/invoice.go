@@ -57,6 +57,8 @@ func (s *Storage) ListInvoices(ctx context.Context, filter ListInvoicesFilter) (
 		})
 	}
 
+	query = query.OrderBy("CREATED_AT DESC")
+
 	return Selectx[models.Invoice](ctx, s.pool, query)
 }
 
