@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	InvoicesService_CreateInvoice_FullMethodName = "/invoices_service.InvoicesService/CreateInvoice"
-	InvoicesService_CheckInvoice_FullMethodName  = "/invoices_service.InvoicesService/CheckInvoice"
-	InvoicesService_UpdateInvoice_FullMethodName = "/invoices_service.InvoicesService/UpdateInvoice"
-	InvoicesService_ListInvoices_FullMethodName  = "/invoices_service.InvoicesService/ListInvoices"
+	InvoicesService_CreateInvoice_FullMethodName       = "/invoices_service.InvoicesService/CreateInvoice"
+	InvoicesService_CheckInvoice_FullMethodName        = "/invoices_service.InvoicesService/CheckInvoice"
+	InvoicesService_UpdateInvoice_FullMethodName       = "/invoices_service.InvoicesService/UpdateInvoice"
+	InvoicesService_ListInvoices_FullMethodName        = "/invoices_service.InvoicesService/ListInvoices"
+	InvoicesService_UpdateInvoiceStatus_FullMethodName = "/invoices_service.InvoicesService/UpdateInvoiceStatus"
 )
 
 // InvoicesServiceClient is the client API for InvoicesService service.
@@ -33,6 +34,7 @@ type InvoicesServiceClient interface {
 	CheckInvoice(ctx context.Context, in *CheckInvoiceRequest, opts ...grpc.CallOption) (*CheckInvoiceResponse, error)
 	UpdateInvoice(ctx context.Context, in *UpdateInvoiceRequest, opts ...grpc.CallOption) (*UpdateInvoiceResponse, error)
 	ListInvoices(ctx context.Context, in *ListInvoicesRequest, opts ...grpc.CallOption) (*ListInvoicesResponse, error)
+	UpdateInvoiceStatus(ctx context.Context, in *UpdateInvoiceStatusRequest, opts ...grpc.CallOption) (*UpdateInvoiceStatusResponse, error)
 }
 
 type invoicesServiceClient struct {
@@ -79,6 +81,15 @@ func (c *invoicesServiceClient) ListInvoices(ctx context.Context, in *ListInvoic
 	return out, nil
 }
 
+func (c *invoicesServiceClient) UpdateInvoiceStatus(ctx context.Context, in *UpdateInvoiceStatusRequest, opts ...grpc.CallOption) (*UpdateInvoiceStatusResponse, error) {
+	out := new(UpdateInvoiceStatusResponse)
+	err := c.cc.Invoke(ctx, InvoicesService_UpdateInvoiceStatus_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // InvoicesServiceServer is the server API for InvoicesService service.
 // All implementations must embed UnimplementedInvoicesServiceServer
 // for forward compatibility
@@ -87,6 +98,7 @@ type InvoicesServiceServer interface {
 	CheckInvoice(context.Context, *CheckInvoiceRequest) (*CheckInvoiceResponse, error)
 	UpdateInvoice(context.Context, *UpdateInvoiceRequest) (*UpdateInvoiceResponse, error)
 	ListInvoices(context.Context, *ListInvoicesRequest) (*ListInvoicesResponse, error)
+	UpdateInvoiceStatus(context.Context, *UpdateInvoiceStatusRequest) (*UpdateInvoiceStatusResponse, error)
 	mustEmbedUnimplementedInvoicesServiceServer()
 }
 
@@ -105,6 +117,9 @@ func (UnimplementedInvoicesServiceServer) UpdateInvoice(context.Context, *Update
 }
 func (UnimplementedInvoicesServiceServer) ListInvoices(context.Context, *ListInvoicesRequest) (*ListInvoicesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListInvoices not implemented")
+}
+func (UnimplementedInvoicesServiceServer) UpdateInvoiceStatus(context.Context, *UpdateInvoiceStatusRequest) (*UpdateInvoiceStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateInvoiceStatus not implemented")
 }
 func (UnimplementedInvoicesServiceServer) mustEmbedUnimplementedInvoicesServiceServer() {}
 
@@ -191,6 +206,24 @@ func _InvoicesService_ListInvoices_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InvoicesService_UpdateInvoiceStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateInvoiceStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvoicesServiceServer).UpdateInvoiceStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InvoicesService_UpdateInvoiceStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvoicesServiceServer).UpdateInvoiceStatus(ctx, req.(*UpdateInvoiceStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // InvoicesService_ServiceDesc is the grpc.ServiceDesc for InvoicesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -213,6 +246,10 @@ var InvoicesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListInvoices",
 			Handler:    _InvoicesService_ListInvoices_Handler,
+		},
+		{
+			MethodName: "UpdateInvoiceStatus",
+			Handler:    _InvoicesService_UpdateInvoiceStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

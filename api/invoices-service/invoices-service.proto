@@ -11,6 +11,7 @@ service InvoicesService {
   rpc CheckInvoice(CheckInvoiceRequest) returns (CheckInvoiceResponse);
   rpc UpdateInvoice(UpdateInvoiceRequest) returns (UpdateInvoiceResponse);
   rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+  rpc UpdateInvoiceStatus(UpdateInvoiceStatusRequest) returns (UpdateInvoiceStatusResponse);
 }
 
 message Invoice {
@@ -49,6 +50,9 @@ enum InvoiceStatus {
   EXPIRED = 5;
   // Send received funds to client
   SENDING_TO_CLIENT = 6;
+  // If invoice is stuck and not sending crypto to client
+  // then set such status to manually control situation
+  MANUAL_CONTROL = 7;
 }
 
 message CheckInvoiceResponse {
@@ -78,3 +82,10 @@ message ListInvoicesRequest {
 message ListInvoicesResponse {
   repeated Invoice invoices = 1;
 }
+
+message UpdateInvoiceStatusRequest {
+  string invoice_id = 1;
+  InvoiceStatus status = 2;
+}
+
+message UpdateInvoiceStatusResponse {}
