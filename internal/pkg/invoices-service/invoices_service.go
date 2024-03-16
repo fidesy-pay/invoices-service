@@ -171,6 +171,10 @@ func (s *Service) ListInvoices(ctx context.Context, reqFilter *desc.ListInvoices
 		}
 	}
 
+	if len(reqFilter.InvoiceStatusIn) > 0 {
+		filter.StatusIn = reqFilter.InvoiceStatusIn
+	}
+
 	invoices, err := s.storage.ListInvoices(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("storage.ListInvoices: %w", err)

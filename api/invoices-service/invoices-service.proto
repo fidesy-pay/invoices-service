@@ -67,6 +67,7 @@ message ListInvoicesRequest {
   message Filter {
     repeated string id_in = 1;
     repeated string client_id_in = 2;
+    repeated InvoiceStatus invoice_status_in = 3;
   }
 
   Filter filter = 1;
