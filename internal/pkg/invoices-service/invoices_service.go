@@ -2,9 +2,7 @@ package invoicesservice
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/IBM/sarama"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/common"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
@@ -14,22 +12,17 @@ import (
 	"github.com/fidesy/sdk/common/logger"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"strings"
+	"sync"
 	"time"
 )
 
 type (
 	Service struct {
 		storage             Storage
-		kafkaConsumer       KafkaConsumer
 		cryptoServiceClient CryptoServiceClient
 		coinGeckoAPIClient  CoinGeckoAPIClient
-	}
-
-	KafkaConsumer interface {
-		Consume() <-chan *sarama.ConsumerMessage
 	}
 
 	CryptoServiceClient interface {
@@ -52,19 +45,17 @@ type (
 func New(
 	ctx context.Context,
 	storage Storage,
-	kafkaConsumer KafkaConsumer,
 	cryptoServiceClient CryptoServiceClient,
 	coinGeckoAPIClient CoinGeckoAPIClient,
 ) *Service {
 	service := &Service{
 		storage:             storage,
-		kafkaConsumer:       kafkaConsumer,
 		cryptoServiceClient: cryptoServiceClient,
 		coinGeckoAPIClient:  coinGeckoAPIClient,
 	}
 
-	go service.consumeTransactions(ctx)
 	go service.cleanExpiredInvoicesWorker(ctx)
+	go service.transferWorker(ctx)
 
 	return service
 }
@@ -183,79 +174,6 @@ func (s *Service) ListInvoices(ctx context.Context, reqFilter *desc.ListInvoices
 	return invoices, nil
 }
 
-func (s *Service) consumeTransactions(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case message := <-s.kafkaConsumer.Consume():
-			go s.processTopicMessage(ctx, message)
-		}
-	}
-}
-
-func (s *Service) processTopicMessage(ctx context.Context, message *sarama.ConsumerMessage) {
-	if message == nil {
-		return
-	}
-
-	wallet := new(models.Wallet)
-	err := json.Unmarshal(message.Value, &wallet)
-	if err != nil {
-		logger.Errorf("consumer: json.Unmarshal: %v", err)
-		return
-	}
-
-	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
-		AddressIn: []string{strings.ToLower(wallet.Address)},
-	})
-	if err != nil {
-		logger.Errorf("processTopicMessage: storage.ListInvoices: %v", err)
-		return
-	}
-
-	if len(invoices) == 0 {
-		logger.Errorf("%v", ErrInvoiceNotFoundByAddress(wallet.Address))
-		return
-	}
-
-	invoice := invoices[0]
-	if wallet.Chain != invoice.Chain || wallet.Token != invoice.Token {
-		return
-	}
-
-	if wallet.Balance >= int64(*invoice.TokenAmount*1e18) {
-		invoice.Status = desc.InvoiceStatus_SUCCESS
-		_, err = s.storage.UpdateInvoice(ctx, invoice)
-		if err != nil {
-			logger.Errorf("processTopicMessage: storage.UpdateInvoice: %v", err)
-			return
-		}
-
-		_, err = s.cryptoServiceClient.CancelAcceptingCrypto(ctx, &crypto_service.CancelAcceptingCryptoRequest{
-			InvoiceId: invoice.ID.String(),
-		})
-		if err != nil {
-			logger.Errorf("cryptoServiceClient.CancelAcceptingCrypto: %w", err)
-		}
-
-		transferResp, err := s.cryptoServiceClient.Transfer(ctx, &crypto_service.TransferRequest{
-			ClientId:  invoice.ClientID.String(),
-			InvoiceId: invoice.ID.String(),
-		})
-		if err != nil {
-			logger.Errorf("cryptoServiceClient.Transfer: %v", err)
-			return
-		}
-
-		logger.Info(
-			"Transaction hash",
-			zap.String("hash", transferResp.TransactionHash),
-		)
-
-	}
-}
-
 func (s *Service) cleanExpiredInvoicesWorker(ctx context.Context) {
 	for {
 		select {
@@ -295,6 +213,60 @@ func (s *Service) cleanExpiredInvoices(ctx context.Context) {
 		if err != nil {
 			logger.Errorf("cleanExpiredInvoices: cryptoServiceClient.CancelAcceptingCrypto: %w", err)
 			continue
+		}
+	}
+}
+
+func (s *Service) transferWorker(ctx context.Context) {
+	transferFunc := s.transferCallback()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.Tick(5 * time.Second):
+			go transferFunc(ctx)
+		}
+	}
+}
+
+func (s *Service) transferCallback() func(ctx context.Context) {
+	invoiceRetries := map[uuid.UUID]int{}
+	var mu sync.RWMutex
+	defaultStep := 2500
+
+	return func(ctx context.Context) {
+		invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
+			StatusIn: []desc.InvoiceStatus{desc.InvoiceStatus_SENDING_TO_CLIENT},
+		})
+		if err != nil {
+			logger.Errorf("transferWorker: storage.ListInvoices: %w", err)
+			return
+		}
+
+		for _, invoice := range invoices {
+			mu.RLock()
+			retriesAmount := invoiceRetries[invoice.ID]
+			mu.RUnlock()
+
+			_, err = s.cryptoServiceClient.Transfer(ctx, &crypto_service.TransferRequest{
+				ClientId:  invoice.ClientID.String(),
+				InvoiceId: invoice.ID.String(),
+				GasLimit:  lo.ToPtr(uint64(50000 + defaultStep*retriesAmount)),
+			})
+			if err != nil {
+				logger.Errorf("cryptoServiceClient.Transfer: %v", err)
+				mu.Lock()
+				invoiceRetries[invoice.ID]++
+				mu.Unlock()
+				return
+			}
+
+			invoice.Status = desc.InvoiceStatus_SUCCESS
+			_, err = s.storage.UpdateInvoice(ctx, invoice)
+			if err != nil {
+				logger.Errorf("storage.UpdateInvoice: %v", err)
+				return
+			}
 		}
 	}
 }

@@ -1,6 +1,6 @@
 package models
 
-type Wallet struct {
+type WalletMessage struct {
 	Address string `json:"address"`
 	Balance int64  `json:"balance"`
 	Chain   string `json:"chain"`

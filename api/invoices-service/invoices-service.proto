@@ -47,6 +47,8 @@ enum InvoiceStatus {
   FAILED = 3;
   SUCCESS = 4;
   EXPIRED = 5;
+  // Send received funds to client
+  SENDING_TO_CLIENT = 6;
 }
 
 message CheckInvoiceResponse {

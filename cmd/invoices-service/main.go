@@ -4,12 +4,12 @@ import (
 	"context"
 	"github.com/fidesy-pay/invoices-service/internal/app"
 	"github.com/fidesy-pay/invoices-service/internal/config"
+	"github.com/fidesy-pay/invoices-service/internal/pkg/consumers"
 	invoicesservice "github.com/fidesy-pay/invoices-service/internal/pkg/invoices-service"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
 	coingecko_api "github.com/fidesy-pay/invoices-service/pkg/coingecko-api"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	"github.com/fidesy/sdk/common/grpc"
-	"github.com/fidesy/sdk/common/kafka"
 	"github.com/fidesy/sdk/common/logger"
 	"github.com/fidesy/sdk/common/postgres"
 	"log"
@@ -48,17 +48,6 @@ func main() {
 		logger.Fatalf("config.Init: %v", err)
 	}
 
-	kafkaConsumer, err := kafka.NewConsumer(ctx, config.Get(config.KafkaBrokers).([]string), paymentsTopic)
-	if err != nil {
-		logger.Fatalf("kafka.NewConsumer: %v", err)
-	}
-	defer func() {
-		err = kafkaConsumer.Close()
-		if err != nil {
-			logger.Fatalf("kafkaConsumer.Close: %v", err)
-		}
-	}()
-
 	cryptoServiceClient, err := grpc.NewClient[crypto_service.CryptoServiceClient](
 		ctx,
 		crypto_service.NewCryptoServiceClient,
@@ -84,7 +73,16 @@ func main() {
 
 	storage := storage.New(pool)
 
-	invoicesService := invoicesservice.New(ctx, storage, kafkaConsumer, cryptoServiceClient, coinGeckoAPIClient)
+	err = consumers.RegisterConsumer(
+		ctx,
+		consumers.NewWalletBalanceConsumer(storage, cryptoServiceClient),
+		paymentsTopic,
+	)
+	if err != nil {
+		logger.Fatalf("consumers.RegisterConsumer: %v", err)
+	}
+
+	invoicesService := invoicesservice.New(ctx, storage, cryptoServiceClient, coinGeckoAPIClient)
 
 	impl := app.New(invoicesService)
 
