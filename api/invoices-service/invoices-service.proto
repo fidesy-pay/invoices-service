@@ -24,6 +24,7 @@ message Invoice {
   InvoiceStatus status = 7;
   string address = 8;
   google.protobuf.Timestamp created_at = 9;
+  string payer_client_id = 10;
 }
 
 message CreateInvoiceRequest {
@@ -63,6 +64,7 @@ message UpdateInvoiceRequest {
   string id = 1;
   string chain = 2;
   string token = 3;
+  optional string payer_client_id = 4;
 }
 
 message UpdateInvoiceResponse {

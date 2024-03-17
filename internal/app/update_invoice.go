@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"errors"
-	
 	invoicesservice "github.com/fidesy-pay/invoices-service/internal/pkg/invoices-service"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"google.golang.org/grpc/codes"

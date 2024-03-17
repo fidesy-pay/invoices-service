@@ -29,9 +29,10 @@ func CreateInvoiceInputFromRequest(req *desc.CreateInvoiceRequest) (*CreateInvoi
 }
 
 type UpdateInvoiceInput struct {
-	InvoiceID uuid.UUID
-	Chain     string
-	Token     string
+	InvoiceID     uuid.UUID
+	Chain         string
+	Token         string
+	PayerClientID *string
 }
 
 func UpdateInvoiceInputFromRequest(req *desc.UpdateInvoiceRequest) (*UpdateInvoiceInput, error) {
@@ -46,8 +47,9 @@ func UpdateInvoiceInputFromRequest(req *desc.UpdateInvoiceRequest) (*UpdateInvoi
 	}
 
 	return &UpdateInvoiceInput{
-		InvoiceID: uuid.MustParse(req.GetId()),
-		Chain:     req.GetChain(),
-		Token:     req.GetToken(),
+		InvoiceID:     uuid.MustParse(req.GetId()),
+		Chain:         req.GetChain(),
+		Token:         req.GetToken(),
+		PayerClientID: req.PayerClientId,
 	}, nil
 }

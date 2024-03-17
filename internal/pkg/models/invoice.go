@@ -17,6 +17,7 @@ type Invoice struct {
 	Status         desc.InvoiceStatus `db:"status"`
 	Address        string             `db:"address"`
 	CreatedAt      time.Time          `db:"created_at"`
+	PayerClientID  *string            `db:"payer_client_id"`
 }
 
 func (i *Invoice) TableName() string {
@@ -58,6 +59,10 @@ func (i *Invoice) ToUpdateMap() map[string]interface{} {
 		updateData["status"] = i.Status
 	}
 
+	if i.PayerClientID != nil {
+		updateData["payer_client_id"] = i.PayerClientID
+	}
+
 	return updateData
 }
 
@@ -79,6 +84,10 @@ func (i *Invoice) Proto() *desc.Invoice {
 
 	if i.TokenAmount != nil {
 		invoice.TokenAmount = *i.TokenAmount
+	}
+
+	if i.PayerClientID != nil {
+		invoice.PayerClientId = *i.PayerClientID
 	}
 
 	return invoice

@@ -126,6 +126,7 @@ func (s *Service) UpdateInvoice(ctx context.Context, input *UpdateInvoiceInput) 
 	invoice.Token = input.Token
 	invoice.Status = desc.InvoiceStatus_PENDING
 	invoice.Address = strings.ToLower(acceptCryptoResp.GetAddress())
+	invoice.PayerClientID = input.PayerClientID
 
 	invoice, err = s.storage.UpdateInvoice(ctx, invoice)
 	if err != nil {
