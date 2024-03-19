@@ -267,7 +267,7 @@ func (s *Service) transferWorker(ctx context.Context) {
 func (s *Service) transferCallback() func(ctx context.Context) {
 	invoiceRetries := map[uuid.UUID]int{}
 	var mu sync.RWMutex
-	defaultStep := 2500
+	defaultStep := 5000
 	maxRetries := 10
 
 	return func(ctx context.Context) {
