@@ -18,6 +18,7 @@ type Invoice struct {
 	Address        string             `db:"address"`
 	CreatedAt      time.Time          `db:"created_at"`
 	PayerClientID  *string            `db:"payer_client_id"`
+	GasLimit       *int               `db:"gas_limit"`
 }
 
 func (i *Invoice) TableName() string {

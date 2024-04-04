@@ -10,6 +10,7 @@ import (
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"github.com/fidesy/sdk/common/logger"
+	"github.com/samber/lo"
 	"google.golang.org/grpc"
 	"strings"
 )
@@ -83,7 +84,7 @@ func (c *WalletBalanceConsumer) Consume(ctx context.Context, msg []byte) error {
 
 	_, err = c.cryptoServiceClient.Transfer(ctx, &crypto_service.TransferRequest{
 		ClientId:  invoice.ClientID.String(),
-		InvoiceId: invoice.ID.String(),
+		InvoiceId: lo.ToPtr(invoice.ID.String()),
 	})
 	if err != nil {
 		return fmt.Errorf("cryptoServiceClient.Transfer: %v", err)

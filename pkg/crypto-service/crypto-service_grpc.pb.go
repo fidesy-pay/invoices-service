@@ -25,6 +25,8 @@ const (
 	CryptoService_CreateWallet_FullMethodName          = "/crypto_service.CryptoService/CreateWallet"
 	CryptoService_ListWallets_FullMethodName           = "/crypto_service.CryptoService/ListWallets"
 	CryptoService_GetBalance_FullMethodName            = "/crypto_service.CryptoService/GetBalance"
+	CryptoService_SuggestGasPrice_FullMethodName       = "/crypto_service.CryptoService/SuggestGasPrice"
+	CryptoService_SuggestFee_FullMethodName            = "/crypto_service.CryptoService/SuggestFee"
 )
 
 // CryptoServiceClient is the client API for CryptoService service.
@@ -37,6 +39,8 @@ type CryptoServiceClient interface {
 	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*Wallet, error)
 	ListWallets(ctx context.Context, in *ListWalletsRequest, opts ...grpc.CallOption) (*ListWalletsResponse, error)
 	GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*GetBalanceResponse, error)
+	SuggestGasPrice(ctx context.Context, in *SuggestGasPriceRequest, opts ...grpc.CallOption) (*SuggestGasPriceResponse, error)
+	SuggestFee(ctx context.Context, in *SuggestFeeRequest, opts ...grpc.CallOption) (*SuggestFeeResponse, error)
 }
 
 type cryptoServiceClient struct {
@@ -101,6 +105,24 @@ func (c *cryptoServiceClient) GetBalance(ctx context.Context, in *GetBalanceRequ
 	return out, nil
 }
 
+func (c *cryptoServiceClient) SuggestGasPrice(ctx context.Context, in *SuggestGasPriceRequest, opts ...grpc.CallOption) (*SuggestGasPriceResponse, error) {
+	out := new(SuggestGasPriceResponse)
+	err := c.cc.Invoke(ctx, CryptoService_SuggestGasPrice_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cryptoServiceClient) SuggestFee(ctx context.Context, in *SuggestFeeRequest, opts ...grpc.CallOption) (*SuggestFeeResponse, error) {
+	out := new(SuggestFeeResponse)
+	err := c.cc.Invoke(ctx, CryptoService_SuggestFee_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CryptoServiceServer is the server API for CryptoService service.
 // All implementations must embed UnimplementedCryptoServiceServer
 // for forward compatibility
@@ -111,6 +133,8 @@ type CryptoServiceServer interface {
 	CreateWallet(context.Context, *CreateWalletRequest) (*Wallet, error)
 	ListWallets(context.Context, *ListWalletsRequest) (*ListWalletsResponse, error)
 	GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error)
+	SuggestGasPrice(context.Context, *SuggestGasPriceRequest) (*SuggestGasPriceResponse, error)
+	SuggestFee(context.Context, *SuggestFeeRequest) (*SuggestFeeResponse, error)
 	mustEmbedUnimplementedCryptoServiceServer()
 }
 
@@ -135,6 +159,12 @@ func (UnimplementedCryptoServiceServer) ListWallets(context.Context, *ListWallet
 }
 func (UnimplementedCryptoServiceServer) GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBalance not implemented")
+}
+func (UnimplementedCryptoServiceServer) SuggestGasPrice(context.Context, *SuggestGasPriceRequest) (*SuggestGasPriceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SuggestGasPrice not implemented")
+}
+func (UnimplementedCryptoServiceServer) SuggestFee(context.Context, *SuggestFeeRequest) (*SuggestFeeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SuggestFee not implemented")
 }
 func (UnimplementedCryptoServiceServer) mustEmbedUnimplementedCryptoServiceServer() {}
 
@@ -257,6 +287,42 @@ func _CryptoService_GetBalance_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CryptoService_SuggestGasPrice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SuggestGasPriceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CryptoServiceServer).SuggestGasPrice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CryptoService_SuggestGasPrice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CryptoServiceServer).SuggestGasPrice(ctx, req.(*SuggestGasPriceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CryptoService_SuggestFee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SuggestFeeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CryptoServiceServer).SuggestFee(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CryptoService_SuggestFee_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CryptoServiceServer).SuggestFee(ctx, req.(*SuggestFeeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CryptoService_ServiceDesc is the grpc.ServiceDesc for CryptoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -287,6 +353,14 @@ var CryptoService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBalance",
 			Handler:    _CryptoService_GetBalance_Handler,
+		},
+		{
+			MethodName: "SuggestGasPrice",
+			Handler:    _CryptoService_SuggestGasPrice_Handler,
+		},
+		{
+			MethodName: "SuggestFee",
+			Handler:    _CryptoService_SuggestFee_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -284,10 +284,14 @@ func (s *Service) transferCallback() func(ctx context.Context) {
 			retriesAmount := invoiceRetries[invoice.ID]
 			mu.RUnlock()
 
+			gasLimit := uint64(50000 + defaultStep*retriesAmount)
+			if invoice.GasLimit != nil {
+				gasLimit = uint64(*invoice.GasLimit)
+			}
 			_, err = s.cryptoServiceClient.Transfer(ctx, &crypto_service.TransferRequest{
 				ClientId:  invoice.ClientID.String(),
-				InvoiceId: invoice.ID.String(),
-				GasLimit:  lo.ToPtr(uint64(50000 + defaultStep*retriesAmount)),
+				InvoiceId: lo.ToPtr(invoice.ID.String()),
+				GasLimit:  lo.ToPtr(gasLimit),
 			})
 			if err != nil {
 				logger.Errorf("cryptoServiceClient.Transfer: %v", err)
