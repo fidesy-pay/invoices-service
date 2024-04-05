@@ -6,6 +6,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
+	"github.com/fidesy/sdk/common/postgres"
 	"github.com/google/uuid"
 	"time"
 )
@@ -19,7 +20,7 @@ type ListInvoicesFilter struct {
 }
 
 func (s *Storage) ListInvoices(ctx context.Context, filter ListInvoicesFilter) ([]*models.Invoice, error) {
-	query := Builder().
+	query := postgres.Builder().
 		Select(invoiceFields).
 		From(invoicesTable)
 
@@ -59,20 +60,20 @@ func (s *Storage) ListInvoices(ctx context.Context, filter ListInvoicesFilter) (
 
 	query = query.OrderBy("CREATED_AT DESC")
 
-	return Selectx[models.Invoice](ctx, s.pool, query)
+	return postgres.Select[models.Invoice](ctx, s.pool, query)
 }
 
 func (s *Storage) CreateInvoice(ctx context.Context, invoice *models.Invoice) (*models.Invoice, error) {
-	query := Builder().
+	query := postgres.Builder().
 		Insert(invoicesTable).
 		SetMap(invoice.ToInsertMap()).
 		Suffix(fmt.Sprintf("RETURNING %s", invoiceFields))
 
-	return Getx[models.Invoice](ctx, s.pool, query)
+	return postgres.Exec[models.Invoice](ctx, s.pool, query)
 }
 
 func (s *Storage) UpdateInvoice(ctx context.Context, invoice *models.Invoice) (*models.Invoice, error) {
-	query := Builder().
+	query := postgres.Builder().
 		Update(invoicesTable).
 		SetMap(invoice.ToUpdateMap()).
 		Where(sq.Eq{
@@ -80,5 +81,5 @@ func (s *Storage) UpdateInvoice(ctx context.Context, invoice *models.Invoice) (*
 		}).
 		Suffix(fmt.Sprintf("RETURNING %s", invoiceFields))
 
-	return Getx[models.Invoice](ctx, s.pool, query)
+	return postgres.Exec[models.Invoice](ctx, s.pool, query)
 }
