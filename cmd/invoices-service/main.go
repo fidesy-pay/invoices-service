@@ -8,8 +8,8 @@ import (
 	invoicesservice "github.com/fidesy-pay/invoices-service/internal/pkg/invoices-service"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
 	admin_service "github.com/fidesy-pay/invoices-service/pkg/admin-service"
-	coingecko_api "github.com/fidesy-pay/invoices-service/pkg/coingecko-api"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
+	external_api "github.com/fidesy-pay/invoices-service/pkg/external-api"
 	"github.com/fidesy/sdk/common/grpc"
 	"github.com/fidesy/sdk/common/logger"
 	"github.com/fidesy/sdk/common/postgres"
@@ -58,9 +58,9 @@ func main() {
 		logger.Fatalf("NewCryptoServiceClient: %v", err)
 	}
 
-	coinGeckoAPIClient, err := grpc.NewClient[coingecko_api.CoinGeckoAPIClient](
+	externalAPI, err := grpc.NewClient[external_api.ExternalAPIClient](
 		ctx,
-		coingecko_api.NewCoinGeckoAPIClient,
+		external_api.NewExternalAPIClient,
 		"rpc:///external-api",
 	)
 	if err != nil {
@@ -92,7 +92,7 @@ func main() {
 		logger.Fatalf("consumers.RegisterConsumer: %v", err)
 	}
 
-	invoicesService := invoicesservice.New(ctx, storage, cryptoServiceClient, coinGeckoAPIClient, adminServiceClient)
+	invoicesService := invoicesservice.New(ctx, storage, cryptoServiceClient, externalAPI, adminServiceClient)
 
 	impl := app.New(invoicesService)
 
