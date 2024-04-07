@@ -27,7 +27,6 @@ type (
 
 	CryptoServiceClient interface {
 		AcceptCrypto(ctx context.Context, in *crypto_service.AcceptCryptoRequest, opts ...grpc.CallOption) (*crypto_service.AcceptCryptoResponse, error)
-		CancelAcceptingCrypto(ctx context.Context, in *crypto_service.CancelAcceptingCryptoRequest, opts ...grpc.CallOption) (*crypto_service.CancelAcceptingCryptoResponse, error)
 		Transfer(ctx context.Context, in *crypto_service.TransferRequest, opts ...grpc.CallOption) (*crypto_service.TransferResponse, error)
 	}
 
@@ -201,19 +200,6 @@ func (s *Service) cleanExpiredInvoices(ctx context.Context) {
 		_, err = s.storage.UpdateInvoice(ctx, invoice)
 		if err != nil {
 			logger.Errorf("cleanExpiredInvoices: storage.UpdateInvoice: %w", err)
-			continue
-		}
-
-		if invoice.Address == "" {
-			continue
-		}
-
-		_, err = s.cryptoServiceClient.CancelAcceptingCrypto(ctx, &crypto_service.CancelAcceptingCryptoRequest{
-			InvoiceId: invoice.ID.String(),
-		})
-		if err != nil {
-			logger.Errorf("cleanExpiredInvoices: cryptoServiceClient.CancelAcceptingCrypto: %w", err)
-			continue
 		}
 	}
 }

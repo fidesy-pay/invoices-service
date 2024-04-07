@@ -19,14 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	CryptoService_AcceptCrypto_FullMethodName          = "/crypto_service.CryptoService/AcceptCrypto"
-	CryptoService_CancelAcceptingCrypto_FullMethodName = "/crypto_service.CryptoService/CancelAcceptingCrypto"
-	CryptoService_Transfer_FullMethodName              = "/crypto_service.CryptoService/Transfer"
-	CryptoService_CreateWallet_FullMethodName          = "/crypto_service.CryptoService/CreateWallet"
-	CryptoService_ListWallets_FullMethodName           = "/crypto_service.CryptoService/ListWallets"
-	CryptoService_GetBalance_FullMethodName            = "/crypto_service.CryptoService/GetBalance"
-	CryptoService_SuggestGasPrice_FullMethodName       = "/crypto_service.CryptoService/SuggestGasPrice"
-	CryptoService_SuggestFee_FullMethodName            = "/crypto_service.CryptoService/SuggestFee"
+	CryptoService_AcceptCrypto_FullMethodName    = "/crypto_service.CryptoService/AcceptCrypto"
+	CryptoService_Transfer_FullMethodName        = "/crypto_service.CryptoService/Transfer"
+	CryptoService_CreateWallet_FullMethodName    = "/crypto_service.CryptoService/CreateWallet"
+	CryptoService_ListWallets_FullMethodName     = "/crypto_service.CryptoService/ListWallets"
+	CryptoService_GetBalance_FullMethodName      = "/crypto_service.CryptoService/GetBalance"
+	CryptoService_SuggestGasPrice_FullMethodName = "/crypto_service.CryptoService/SuggestGasPrice"
+	CryptoService_SuggestFee_FullMethodName      = "/crypto_service.CryptoService/SuggestFee"
 )
 
 // CryptoServiceClient is the client API for CryptoService service.
@@ -34,7 +33,6 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CryptoServiceClient interface {
 	AcceptCrypto(ctx context.Context, in *AcceptCryptoRequest, opts ...grpc.CallOption) (*AcceptCryptoResponse, error)
-	CancelAcceptingCrypto(ctx context.Context, in *CancelAcceptingCryptoRequest, opts ...grpc.CallOption) (*CancelAcceptingCryptoResponse, error)
 	Transfer(ctx context.Context, in *TransferRequest, opts ...grpc.CallOption) (*TransferResponse, error)
 	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*Wallet, error)
 	ListWallets(ctx context.Context, in *ListWalletsRequest, opts ...grpc.CallOption) (*ListWalletsResponse, error)
@@ -54,15 +52,6 @@ func NewCryptoServiceClient(cc grpc.ClientConnInterface) CryptoServiceClient {
 func (c *cryptoServiceClient) AcceptCrypto(ctx context.Context, in *AcceptCryptoRequest, opts ...grpc.CallOption) (*AcceptCryptoResponse, error) {
 	out := new(AcceptCryptoResponse)
 	err := c.cc.Invoke(ctx, CryptoService_AcceptCrypto_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *cryptoServiceClient) CancelAcceptingCrypto(ctx context.Context, in *CancelAcceptingCryptoRequest, opts ...grpc.CallOption) (*CancelAcceptingCryptoResponse, error) {
-	out := new(CancelAcceptingCryptoResponse)
-	err := c.cc.Invoke(ctx, CryptoService_CancelAcceptingCrypto_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +117,6 @@ func (c *cryptoServiceClient) SuggestFee(ctx context.Context, in *SuggestFeeRequ
 // for forward compatibility
 type CryptoServiceServer interface {
 	AcceptCrypto(context.Context, *AcceptCryptoRequest) (*AcceptCryptoResponse, error)
-	CancelAcceptingCrypto(context.Context, *CancelAcceptingCryptoRequest) (*CancelAcceptingCryptoResponse, error)
 	Transfer(context.Context, *TransferRequest) (*TransferResponse, error)
 	CreateWallet(context.Context, *CreateWalletRequest) (*Wallet, error)
 	ListWallets(context.Context, *ListWalletsRequest) (*ListWalletsResponse, error)
@@ -144,9 +132,6 @@ type UnimplementedCryptoServiceServer struct {
 
 func (UnimplementedCryptoServiceServer) AcceptCrypto(context.Context, *AcceptCryptoRequest) (*AcceptCryptoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AcceptCrypto not implemented")
-}
-func (UnimplementedCryptoServiceServer) CancelAcceptingCrypto(context.Context, *CancelAcceptingCryptoRequest) (*CancelAcceptingCryptoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CancelAcceptingCrypto not implemented")
 }
 func (UnimplementedCryptoServiceServer) Transfer(context.Context, *TransferRequest) (*TransferResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Transfer not implemented")
@@ -193,24 +178,6 @@ func _CryptoService_AcceptCrypto_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CryptoServiceServer).AcceptCrypto(ctx, req.(*AcceptCryptoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CryptoService_CancelAcceptingCrypto_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CancelAcceptingCryptoRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CryptoServiceServer).CancelAcceptingCrypto(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CryptoService_CancelAcceptingCrypto_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CryptoServiceServer).CancelAcceptingCrypto(ctx, req.(*CancelAcceptingCryptoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -333,10 +300,6 @@ var CryptoService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AcceptCrypto",
 			Handler:    _CryptoService_AcceptCrypto_Handler,
-		},
-		{
-			MethodName: "CancelAcceptingCrypto",
-			Handler:    _CryptoService_CancelAcceptingCrypto_Handler,
 		},
 		{
 			MethodName: "Transfer",

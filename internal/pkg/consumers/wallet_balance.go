@@ -9,7 +9,6 @@ import (
 	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
-	"github.com/fidesy/sdk/common/logger"
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
 	"strings"
@@ -27,7 +26,6 @@ type (
 	}
 
 	CryptoServiceClient interface {
-		CancelAcceptingCrypto(ctx context.Context, in *crypto_service.CancelAcceptingCryptoRequest, opts ...grpc.CallOption) (*crypto_service.CancelAcceptingCryptoResponse, error)
 		Transfer(ctx context.Context, in *crypto_service.TransferRequest, opts ...grpc.CallOption) (*crypto_service.TransferResponse, error)
 	}
 )
@@ -73,13 +71,6 @@ func (c *WalletBalanceConsumer) Consume(ctx context.Context, msg []byte) error {
 	_, err = c.storage.UpdateInvoice(ctx, invoice)
 	if err != nil {
 		return fmt.Errorf("storage.UpdateInvoice: %v", err)
-	}
-
-	_, err = c.cryptoServiceClient.CancelAcceptingCrypto(ctx, &crypto_service.CancelAcceptingCryptoRequest{
-		InvoiceId: invoice.ID.String(),
-	})
-	if err != nil {
-		logger.Errorf("cryptoServiceClient.CancelAcceptingCrypto: %w", err)
 	}
 
 	_, err = c.cryptoServiceClient.Transfer(ctx, &crypto_service.TransferRequest{
