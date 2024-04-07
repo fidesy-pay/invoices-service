@@ -8,7 +8,6 @@ import (
 	invoicesservice "github.com/fidesy-pay/invoices-service/internal/pkg/invoices-service"
 	outbox_processor "github.com/fidesy-pay/invoices-service/internal/pkg/outbox-processor"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
-	admin_service "github.com/fidesy-pay/invoices-service/pkg/admin-service"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	external_api "github.com/fidesy-pay/invoices-service/pkg/external-api"
 	"github.com/fidesy/sdk/common/grpc"
@@ -69,15 +68,6 @@ func main() {
 		logger.Fatalf("NewCryptoServiceClient: %v", err)
 	}
 
-	adminServiceClient, err := grpc.NewClient[admin_service.AdminServiceClient](
-		ctx,
-		admin_service.NewAdminServiceClient,
-		"rpc:///admin-service",
-	)
-	if err != nil {
-		logger.Fatalf("NewAlertsServiceClient: %v", err)
-	}
-
 	pool, err := postgres.Connect(ctx, config.Get(config.PgDsn).(string))
 	if err != nil {
 		logger.Fatalf("postgres.Connect: %v", err)
@@ -105,7 +95,7 @@ func main() {
 	outboxProcessor := outbox_processor.New(storage, producer)
 	go outboxProcessor.Publish(ctx)
 
-	invoicesService := invoicesservice.New(ctx, storage, cryptoServiceClient, externalAPI, adminServiceClient)
+	invoicesService := invoicesservice.New(ctx, storage, cryptoServiceClient, externalAPI)
 
 	impl := app.New(invoicesService)
 
