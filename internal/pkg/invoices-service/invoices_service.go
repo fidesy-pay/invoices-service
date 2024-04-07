@@ -8,8 +8,8 @@ import (
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
 	admin_service "github.com/fidesy-pay/invoices-service/pkg/admin-service"
-	coingecko_api "github.com/fidesy-pay/invoices-service/pkg/coingecko-api"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
+	external_api "github.com/fidesy-pay/invoices-service/pkg/external-api"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"github.com/fidesy/sdk/common/logger"
 	"github.com/google/uuid"
@@ -24,7 +24,7 @@ type (
 	Service struct {
 		storage             Storage
 		cryptoServiceClient CryptoServiceClient
-		coinGeckoAPIClient  CoinGeckoAPIClient
+		externalAPI         ExternalAPI
 		adminServiceClient  AdminServiceClient
 	}
 
@@ -34,8 +34,8 @@ type (
 		Transfer(ctx context.Context, in *crypto_service.TransferRequest, opts ...grpc.CallOption) (*crypto_service.TransferResponse, error)
 	}
 
-	CoinGeckoAPIClient interface {
-		GetPrice(ctx context.Context, in *coingecko_api.GetPriceRequest, opts ...grpc.CallOption) (*coingecko_api.GetPriceResponse, error)
+	ExternalAPI interface {
+		GetPrice(ctx context.Context, in *external_api.GetPriceRequest, opts ...grpc.CallOption) (*external_api.GetPriceResponse, error)
 	}
 
 	AdminServiceClient interface {
@@ -53,13 +53,13 @@ func New(
 	ctx context.Context,
 	storage Storage,
 	cryptoServiceClient CryptoServiceClient,
-	coinGeckoAPIClient CoinGeckoAPIClient,
+	externalAPI ExternalAPI,
 	adminServiceClient AdminServiceClient,
 ) *Service {
 	service := &Service{
 		storage:             storage,
 		cryptoServiceClient: cryptoServiceClient,
-		coinGeckoAPIClient:  coinGeckoAPIClient,
+		externalAPI:         externalAPI,
 		adminServiceClient:  adminServiceClient,
 	}
 
@@ -113,7 +113,7 @@ func (s *Service) UpdateInvoice(ctx context.Context, input *UpdateInvoiceInput) 
 		return nil, fmt.Errorf("cryptoServiceClient.AcceptCrypto: %w", err)
 	}
 
-	tokenPriceResp, err := s.coinGeckoAPIClient.GetPrice(ctx, &coingecko_api.GetPriceRequest{
+	tokenPriceResp, err := s.externalAPI.GetPrice(ctx, &external_api.GetPriceRequest{
 		Symbol: input.Token,
 	})
 	if err != nil {

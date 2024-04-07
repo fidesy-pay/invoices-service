@@ -8,17 +8,17 @@ import (
 )
 
 type Invoice struct {
-	ID             uuid.UUID          `db:"id"`
-	ClientID       uuid.UUID          `db:"client_id"`
-	UsdCentsAmount int64              `db:"usd_cents_amount"`
-	TokenAmount    *float64           `db:"token_amount"`
-	Chain          string             `db:"chain"`
-	Token          string             `db:"token"`
-	Status         desc.InvoiceStatus `db:"status"`
-	Address        string             `db:"address"`
-	CreatedAt      time.Time          `db:"created_at"`
-	PayerClientID  *string            `db:"payer_client_id"`
-	GasLimit       *int               `db:"gas_limit"`
+	ID             uuid.UUID          `db:"id" json:"id"`
+	ClientID       uuid.UUID          `db:"client_id" json:"client_id"`
+	UsdCentsAmount int64              `db:"usd_cents_amount" json:"usd_cents_amount"`
+	TokenAmount    *float64           `db:"token_amount" json:"token_amount"`
+	Chain          string             `db:"chain" json:"chain"`
+	Token          string             `db:"token" json:"token"`
+	Status         desc.InvoiceStatus `db:"status" json:"status"`
+	Address        string             `db:"address" json:"address"`
+	CreatedAt      time.Time          `db:"created_at" json:"created_at"`
+	PayerClientID  *string            `db:"payer_client_id" json:"payer_client_id"`
+	GasLimit       *int               `db:"gas_limit" json:"gas_limit"`
 }
 
 func (i *Invoice) TableName() string {

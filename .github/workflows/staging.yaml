@@ -23,7 +23,7 @@ jobs:
           if [ $BRANCH_NAME = "master" ]; then
             APP_NAME=$REPO_NAME
           else
-            APP_NAME="${REPO_NAME}_${BRANCH_NAME}"
+            APP_NAME="${REPO_NAME}-stage"
           fi
           
           echo "APP_NAME=$APP_NAME" >> vars.env
@@ -88,7 +88,7 @@ jobs:
           
           # generate random ports
           GRPC_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
-          METRICS_PORT=$((RANDOM % (65000 - 5000 + 1) + 5000))
+          METRICS_PORT=40401
           
           docker build --tag $APP_NAME .
           

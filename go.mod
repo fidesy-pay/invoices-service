@@ -4,7 +4,7 @@ go 1.21.2
 
 require (
 	github.com/Masterminds/squirrel v1.5.4
-	github.com/fidesy/sdk v0.0.0-20240405225239-525495c52908
+	github.com/fidesy/sdk v0.0.0-20240406233818-c59cc1de0660
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1

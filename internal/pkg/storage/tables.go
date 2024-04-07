@@ -10,6 +10,9 @@ import (
 var (
 	invoicesTable = (&models.Invoice{}).TableName()
 	invoiceFields = modelColumns(&models.Invoice{})
+
+	invoicesOutboxTable = (&models.InvoiceOutbox{}).TableName()
+	invoicesOutboxFields = modelColumns(&models.InvoiceOutbox{})
 )
 
 type Model interface {
