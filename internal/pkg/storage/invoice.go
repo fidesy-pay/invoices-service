@@ -26,9 +26,9 @@ func (s *Storage) ListInvoices(ctx context.Context, filter ListInvoicesFilter) (
 		From(invoicesTable)
 
 	// does not show expired invoices
-	query = query.Where(sq.NotEq{
-		"status": desc.InvoiceStatus_EXPIRED,
-	})
+	//query = query.Where(sq.NotEq{
+	//	"status": desc.InvoiceStatus_EXPIRED,
+	//})
 	if len(filter.IDIn) > 0 {
 		query = query.Where(sq.Eq{
 			"id": filter.IDIn,
