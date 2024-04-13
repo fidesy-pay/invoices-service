@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -19,7 +20,7 @@ func (i *Implementation) ListInvoices(ctx context.Context, req *desc.ListInvoice
 
 	invoices, err := i.invoicesService.ListInvoices(ctx, req.GetFilter())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invoicesService.ListInvoices: %v", err)
+		return nil, status.Errorf(codes.Internal, "invoicesService.ListInvoices: %v", err)
 	}
 
 	return &desc.ListInvoicesResponse{
