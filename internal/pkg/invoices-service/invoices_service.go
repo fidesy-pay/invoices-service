@@ -186,6 +186,8 @@ func (s *Service) cleanExpiredInvoicesWorker(ctx context.Context) {
 }
 
 func (s *Service) cleanExpiredInvoices(ctx context.Context) {
+	ctx = context.WithValue(ctx, "skip_span", true)
+
 	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
 		StatusIn:    []desc.InvoiceStatus{desc.InvoiceStatus_NEW, desc.InvoiceStatus_PENDING},
 		CreatedAtLt: lo.ToPtr(time.Now().Add(-20 * time.Minute)),
@@ -205,6 +207,8 @@ func (s *Service) cleanExpiredInvoices(ctx context.Context) {
 }
 
 func (s *Service) transferWorker(ctx context.Context) {
+	ctx = context.WithValue(ctx, "skip_span", true)
+
 	transferFunc := s.transferCallback()
 	for {
 		select {
