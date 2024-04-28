@@ -3,6 +3,7 @@ package invoicesservice
 import (
 	"context"
 	"fmt"
+	"github.com/fidesy-pay/invoices-service/internal/config"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/common"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
@@ -190,7 +191,7 @@ func (s *Service) cleanExpiredInvoices(ctx context.Context) {
 
 	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
 		StatusIn:    []desc.InvoiceStatus{desc.InvoiceStatus_NEW, desc.InvoiceStatus_PENDING},
-		CreatedAtLt: lo.ToPtr(time.Now().Add(-20 * time.Minute)),
+		CreatedAtLt: lo.ToPtr(time.Now().Add(-config.Get(config.ExpireInterval).(time.Duration))),
 	})
 	if err != nil {
 		logger.Errorf("cleanExpiredInvoices: storage.ListInvoices: %w", err)

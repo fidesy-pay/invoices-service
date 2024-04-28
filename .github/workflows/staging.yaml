@@ -102,5 +102,19 @@ jobs:
              $APP_NAME
           
           echo http://${{ vars.SERVER_HOST }}:$SWAGGER_PORT/docs
+
+  e2e-tests:
+    runs-on: self-hosted
+    name: E2E tests
+    needs: deploy
+    steps:
+      - name: Get and run tests
+        run: |
+          rm -rf e2e-tests
+          git clone git@github.com:fidesy-pay/e2e-tests.git
+          cd e2e-tests
+          go clean -testcache
+          go test -v ./internal/tests/basic/...
+          go test -v ./internal/tests/registration/...
           
          
