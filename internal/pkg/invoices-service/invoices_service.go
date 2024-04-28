@@ -3,6 +3,10 @@ package invoicesservice
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/fidesy-pay/invoices-service/internal/pkg/common"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
@@ -13,9 +17,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
-	"strings"
-	"sync"
-	"time"
 )
 
 type (
@@ -217,10 +218,10 @@ func (s *Service) transferWorker(ctx context.Context) {
 }
 
 func (s *Service) transferCallback() func(ctx context.Context) {
-	invoiceRetries := map[uuid.UUID]int{}
-	var mu sync.RWMutex
-	defaultStep := 50000
-	maxRetries := 10
+	var (
+		locks = make(map[string]struct{})
+		mu    sync.RWMutex
+	)
 
 	return func(ctx context.Context) {
 		invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
@@ -232,45 +233,62 @@ func (s *Service) transferCallback() func(ctx context.Context) {
 		}
 
 		for _, invoice := range invoices {
+			invoice := invoice
+
 			mu.RLock()
-			retriesAmount := invoiceRetries[invoice.ID]
+			_, ok := locks[invoice.ID.String()]
 			mu.RUnlock()
-
-			gasLimit := uint64(50000 + defaultStep*retriesAmount)
-			if invoice.GasLimit != nil {
-				gasLimit = uint64(*invoice.GasLimit)
-			}
-			_, err = s.cryptoServiceClient.Transfer(ctx, &crypto_service.TransferRequest{
-				ClientId:  invoice.ClientID.String(),
-				InvoiceId: lo.ToPtr(invoice.ID.String()),
-				GasLimit:  lo.ToPtr(gasLimit),
-			})
-			if err != nil {
-				logger.Errorf("cryptoServiceClient.Transfer: %v", err)
-
-				if retriesAmount < maxRetries {
-					mu.Lock()
-					invoiceRetries[invoice.ID]++
-					mu.Unlock()
-					return
-				}
-
-				invoice.Status = desc.InvoiceStatus_MANUAL_CONTROL
-				_, err = s.storage.UpdateInvoice(ctx, invoice)
-				if err != nil {
-					logger.Errorf("storage.UpdateInvoice: %v", err)
-					return
-				}
-
-				return
+			if ok {
+				continue
 			}
 
-			invoice.Status = desc.InvoiceStatus_SUCCESS
-			_, err = s.storage.UpdateInvoice(ctx, invoice)
-			if err != nil {
-				logger.Errorf("storage.UpdateInvoice: %v", err)
-				return
-			}
+			mu.Lock()
+			locks[invoice.ID.String()] = struct{}{}
+			mu.Unlock()
+
+			defer func() {
+				mu.Lock()
+				delete(locks, invoice.ID.String())
+				mu.Unlock()
+			}()
+
+			go func() {
+				s.completeInvoice(ctx, invoice)
+			}()
 		}
+	}
+}
+
+func (s *Service) completeInvoice(ctx context.Context, invoice *models.Invoice) {
+	defaultStep := 50000
+
+	for i := 0; i < 10; i++ {
+		gasLimit := uint64(50000 + defaultStep*i)
+		if invoice.GasLimit != nil {
+			gasLimit = uint64(*invoice.GasLimit)
+		}
+
+		_, err := s.cryptoServiceClient.Transfer(ctx, &crypto_service.TransferRequest{
+			ClientId:  invoice.ClientID.String(),
+			InvoiceId: lo.ToPtr(invoice.ID.String()),
+			GasLimit:  lo.ToPtr(gasLimit),
+		})
+		if err != nil {
+			continue
+		}
+
+		invoice.Status = desc.InvoiceStatus_SUCCESS
+		_, err = s.storage.UpdateInvoice(ctx, invoice)
+		if err != nil {
+			logger.Errorf("storage.UpdateInvoice: %v", err)
+			return
+		}
+	}
+
+	invoice.Status = desc.InvoiceStatus_MANUAL_CONTROL
+	_, err := s.storage.UpdateInvoice(ctx, invoice)
+	if err != nil {
+		logger.Errorf("storage.UpdateInvoice: %v", err)
+		return
 	}
 }
