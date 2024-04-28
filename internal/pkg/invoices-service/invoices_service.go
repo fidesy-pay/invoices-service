@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fidesy-pay/invoices-service/internal/config"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/common"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
@@ -187,9 +188,11 @@ func (s *Service) cleanExpiredInvoicesWorker(ctx context.Context) {
 }
 
 func (s *Service) cleanExpiredInvoices(ctx context.Context) {
+	ctx = context.WithValue(ctx, "skip_span", true)
+
 	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
 		StatusIn:    []desc.InvoiceStatus{desc.InvoiceStatus_NEW, desc.InvoiceStatus_PENDING},
-		CreatedAtLt: lo.ToPtr(time.Now().Add(-20 * time.Minute)),
+		CreatedAtLt: lo.ToPtr(time.Now().Add(-config.Get(config.ExpireInterval).(time.Duration))),
 	})
 	if err != nil {
 		logger.Errorf("cleanExpiredInvoices: storage.ListInvoices: %w", err)
@@ -206,6 +209,8 @@ func (s *Service) cleanExpiredInvoices(ctx context.Context) {
 }
 
 func (s *Service) transferWorker(ctx context.Context) {
+	ctx = context.WithValue(ctx, "skip_span", true)
+
 	transferFunc := s.transferCallback()
 	for {
 		select {
@@ -246,13 +251,13 @@ func (s *Service) transferCallback() func(ctx context.Context) {
 			locks[invoice.ID.String()] = struct{}{}
 			mu.Unlock()
 
-			defer func() {
-				mu.Lock()
-				delete(locks, invoice.ID.String())
-				mu.Unlock()
-			}()
-
 			go func() {
+				defer func() {
+					mu.Lock()
+					delete(locks, invoice.ID.String())
+					mu.Unlock()
+				}()
+
 				s.completeInvoice(ctx, invoice)
 			}()
 		}
@@ -283,6 +288,8 @@ func (s *Service) completeInvoice(ctx context.Context, invoice *models.Invoice) 
 			logger.Errorf("storage.UpdateInvoice: %v", err)
 			return
 		}
+
+		return
 	}
 
 	invoice.Status = desc.InvoiceStatus_MANUAL_CONTROL

@@ -46,6 +46,8 @@ func (s *Service) Publish(ctx context.Context) {
 }
 
 func (s *Service) publish(ctx context.Context) {
+	ctx = context.WithValue(ctx, "skip_span", true)
+
 	invoicesOutbox, err := s.storage.ListInvoicesOutbox(ctx, 100)
 	if err != nil {
 		logger.Errorf("storage.ListInvoicesOutbox: %v", err)

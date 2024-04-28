@@ -1,3 +1,5 @@
 kafka-brokers: kafka-stg:9094
 
 pg-dsn: postgres://invoices-service:XF3UJzDZlh7c7Tbh65dL@invoices-service-db-stg/invoices-service?sslmode=disable
+
+expire-interval: 1m
