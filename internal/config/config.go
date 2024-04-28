@@ -4,20 +4,23 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	KafkaBrokers = "kafka-brokers"
-	PgDsn        = "pg-dsn"
+	KafkaBrokers   = "kafka-brokers"
+	PgDsn          = "pg-dsn"
+	ExpireInterval = "expire-interval"
 )
 
 var conf *Config
 
 type Config struct {
-	KafkaBrokers string `yaml:"kafka-brokers"`
-	PgDsn        string `yaml:"pg-dsn"`
+	KafkaBrokers   string        `yaml:"kafka-brokers"`
+	PgDsn          string        `yaml:"pg-dsn"`
+	ExpireInterval time.Duration `yaml:"expire-interval"`
 }
 
 func Init() error {
@@ -38,6 +41,8 @@ func Get(key string) interface{} {
 		return strings.Split(conf.KafkaBrokers, ",")
 	case PgDsn:
 		return conf.PgDsn
+	case ExpireInterval:
+		return conf.ExpireInterval
 	default:
 		panic(ErrConfigNotFoundByKey(key))
 	}
