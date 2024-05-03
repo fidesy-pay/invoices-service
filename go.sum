@@ -21,8 +21,8 @@ github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 h1:Oy0F4A
 github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3/go.mod h1:YvSRo5mw33fLEx1+DlK6L2VV43tJt5Eyel9n9XBcR+0=
 github.com/eapache/queue v1.1.0 h1:YOEu7KNc61ntiQlcEeUIoDTJ2o8mQznoNvUhiigpIqc=
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=
-github.com/fidesy/sdk v0.0.0-20240427193153-1303c9513224 h1:UZL+cso5PBn/dtk/mkGnZZEMYd+3qTO6GuqD8l2dpko=
-github.com/fidesy/sdk v0.0.0-20240427193153-1303c9513224/go.mod h1:3RFYmuHEgXMqKI3MufBDQEXULT1ZWN9d0d0o4LNiA+w=
+github.com/fidesy/sdk v0.0.0-20240512084034-a126f4740341 h1:MlE0dr36enR4NvAq3kf2+RI02/1bQz75X1YQ8ZGSs5Q=
+github.com/fidesy/sdk v0.0.0-20240512084034-a126f4740341/go.mod h1:3RFYmuHEgXMqKI3MufBDQEXULT1ZWN9d0d0o4LNiA+w=
 github.com/fidesy/sdk/services/realtime-configs-service v0.0.0-20240409212146-10edcc4c043b h1:/c0dCR/LJHP4zj+Puf8BB6az9qO+3jrSJuO/salvhuc=
 github.com/fidesy/sdk/services/realtime-configs-service v0.0.0-20240409212146-10edcc4c043b/go.mod h1:NyC/72iEqzVm1tWNQuSddNiNuhtB2pxDwkMBK/0tne4=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=

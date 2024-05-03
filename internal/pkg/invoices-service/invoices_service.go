@@ -189,6 +189,8 @@ func (s *Service) ListInvoices(ctx context.Context, req *desc.ListInvoicesReques
 
 func (s *Service) cleanExpiredInvoicesWorker(ctx context.Context) {
 	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -226,7 +228,9 @@ func (s *Service) cleanExpiredInvoices(ctx context.Context) {
 
 func (s *Service) transferWorker(ctx context.Context) {
 	ctx = context.WithValue(ctx, "skip_span", true)
+
 	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 
 	transferFunc := s.transferCallback()
 	for {

@@ -2,22 +2,23 @@ package main
 
 import (
 	"context"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/fidesy-pay/invoices-service/internal/app"
 	"github.com/fidesy-pay/invoices-service/internal/config"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/consumers"
 	invoicesservice "github.com/fidesy-pay/invoices-service/internal/pkg/invoices-service"
-	outbox_processor "github.com/fidesy-pay/invoices-service/internal/pkg/outbox-processor"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	external_api "github.com/fidesy-pay/invoices-service/pkg/external-api"
 	"github.com/fidesy/sdk/common/grpc"
 	"github.com/fidesy/sdk/common/kafka"
 	"github.com/fidesy/sdk/common/logger"
+	"github.com/fidesy/sdk/common/outbox_processor"
 	"github.com/fidesy/sdk/common/postgres"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 const (
@@ -92,7 +93,12 @@ func main() {
 		panic(err)
 	}
 
-	outboxProcessor := outbox_processor.New(storage, producer)
+	outboxProcessor := outbox_processor.New(
+		"invoices",
+		"invoices-json",
+		pool,
+		producer,
+	)
 	go outboxProcessor.Publish(ctx)
 
 	invoicesService := invoicesservice.New(ctx, storage, cryptoServiceClient, externalAPI)
