@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	invoicesservice "github.com/fidesy-pay/invoices-service/internal/pkg/invoices-service"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/storage"
 	crypto_service "github.com/fidesy-pay/invoices-service/pkg/crypto-service"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
+	"github.com/fidesy/sdk/common/postgres"
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
-	"strings"
 )
 
 type (
@@ -21,7 +23,7 @@ type (
 	}
 
 	Storage interface {
-		ListInvoices(ctx context.Context, filter storage.ListInvoicesFilter) ([]*models.Invoice, error)
+		ListInvoices(ctx context.Context, filter storage.ListInvoicesFilter, pagination postgres.Pagination) ([]*models.Invoice, error)
 		UpdateInvoice(ctx context.Context, invoice *models.Invoice) (*models.Invoice, error)
 	}
 
@@ -49,7 +51,7 @@ func (c *WalletBalanceConsumer) Consume(ctx context.Context, msg []byte) error {
 
 	invoices, err := c.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
 		AddressIn: []string{strings.ToLower(wallet.Address)},
-	})
+	}, postgres.NewPagination(1, 100))
 	if err != nil {
 		return fmt.Errorf("storage.ListInvoices: %v", err)
 	}

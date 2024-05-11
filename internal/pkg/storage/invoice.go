@@ -3,13 +3,14 @@ package storage
 import (
 	"context"
 	"fmt"
+	"time"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/fidesy-pay/invoices-service/internal/pkg/models"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"github.com/fidesy/sdk/common/postgres"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"time"
 )
 
 type ListInvoicesFilter struct {
@@ -20,7 +21,7 @@ type ListInvoicesFilter struct {
 	CreatedAtLt *time.Time
 }
 
-func (s *Storage) ListInvoices(ctx context.Context, filter ListInvoicesFilter) ([]*models.Invoice, error) {
+func (s *Storage) ListInvoices(ctx context.Context, filter ListInvoicesFilter, pagination postgres.Pagination) ([]*models.Invoice, error) {
 	query := postgres.Builder().
 		Select(invoiceFields).
 		From(invoicesTable)
@@ -59,7 +60,11 @@ func (s *Storage) ListInvoices(ctx context.Context, filter ListInvoicesFilter) (
 		})
 	}
 
-	query = query.OrderBy("CREATED_AT DESC")
+	query = query.OrderBy("created_at DESC")
+
+	query = query.
+		Limit(pagination.Limit()).
+		Offset(pagination.Offset())
 
 	return postgres.Select[models.Invoice](ctx, s.pool, query)
 }

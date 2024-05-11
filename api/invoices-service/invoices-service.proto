@@ -78,6 +78,8 @@ message ListInvoicesRequest {
   }
 
   Filter filter = 1;
+  uint64 page = 2;
+  uint64 per_page = 3;
 }
 
 message ListInvoicesResponse {

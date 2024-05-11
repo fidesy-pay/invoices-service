@@ -18,7 +18,7 @@ func (i *Implementation) ListInvoices(ctx context.Context, req *desc.ListInvoice
 		return nil, status.Errorf(codes.InvalidArgument, "validation failed: %v", err)
 	}
 
-	invoices, err := i.invoicesService.ListInvoices(ctx, req.GetFilter())
+	invoices, err := i.invoicesService.ListInvoices(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "invoicesService.ListInvoices: %v", err)
 	}

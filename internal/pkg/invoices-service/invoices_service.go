@@ -15,6 +15,7 @@ import (
 	external_api "github.com/fidesy-pay/invoices-service/pkg/external-api"
 	desc "github.com/fidesy-pay/invoices-service/pkg/invoices-service"
 	"github.com/fidesy/sdk/common/logger"
+	"github.com/fidesy/sdk/common/postgres"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
@@ -38,7 +39,7 @@ type (
 
 	Storage interface {
 		CreateInvoice(ctx context.Context, invoice *models.Invoice) (*models.Invoice, error)
-		ListInvoices(ctx context.Context, filter storage.ListInvoicesFilter) ([]*models.Invoice, error)
+		ListInvoices(ctx context.Context, filter storage.ListInvoicesFilter, pagination postgres.Pagination) ([]*models.Invoice, error)
 		UpdateInvoice(ctx context.Context, invoice *models.Invoice) (*models.Invoice, error)
 	}
 )
@@ -80,9 +81,13 @@ func (s *Service) CreateInvoice(ctx context.Context, input *CreateInvoiceInput) 
 }
 
 func (s *Service) UpdateInvoice(ctx context.Context, input *UpdateInvoiceInput) (*models.Invoice, error) {
-	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
-		IDIn: []uuid.UUID{input.InvoiceID},
-	})
+	invoices, err := s.storage.ListInvoices(
+		ctx,
+		storage.ListInvoicesFilter{
+			IDIn: []uuid.UUID{input.InvoiceID},
+		},
+		postgres.NewPagination(1, 1),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("storage.ListInvoices: %w", err)
 	}
@@ -132,9 +137,13 @@ func (s *Service) CheckInvoice(ctx context.Context, invoiceIDStr string) (*model
 	// we validate ID in handler logic
 	invoiceID := uuid.MustParse(invoiceIDStr)
 
-	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
-		IDIn: []uuid.UUID{invoiceID},
-	})
+	invoices, err := s.storage.ListInvoices(
+		ctx,
+		storage.ListInvoicesFilter{
+			IDIn: []uuid.UUID{invoiceID},
+		},
+		postgres.NewPagination(1, 1),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("storage.ListInvoices: %w", err)
 	}
@@ -146,8 +155,10 @@ func (s *Service) CheckInvoice(ctx context.Context, invoiceIDStr string) (*model
 	return invoices[0], nil
 }
 
-func (s *Service) ListInvoices(ctx context.Context, reqFilter *desc.ListInvoicesRequest_Filter) ([]*models.Invoice, error) {
+func (s *Service) ListInvoices(ctx context.Context, req *desc.ListInvoicesRequest) ([]*models.Invoice, error) {
 	var err error
+
+	reqFilter := req.GetFilter()
 
 	filter := storage.ListInvoicesFilter{}
 	if len(reqFilter.ClientIdIn) > 0 {
@@ -168,7 +179,7 @@ func (s *Service) ListInvoices(ctx context.Context, reqFilter *desc.ListInvoices
 		filter.StatusIn = reqFilter.InvoiceStatusIn
 	}
 
-	invoices, err := s.storage.ListInvoices(ctx, filter)
+	invoices, err := s.storage.ListInvoices(ctx, filter, postgres.NewPagination(req.GetPage(), req.GetPerPage()))
 	if err != nil {
 		return nil, fmt.Errorf("storage.ListInvoices: %w", err)
 	}
@@ -177,11 +188,12 @@ func (s *Service) ListInvoices(ctx context.Context, reqFilter *desc.ListInvoices
 }
 
 func (s *Service) cleanExpiredInvoicesWorker(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.Tick(5 * time.Second):
+		case <-ticker.C:
 			go s.cleanExpiredInvoices(ctx)
 		}
 	}
@@ -190,10 +202,14 @@ func (s *Service) cleanExpiredInvoicesWorker(ctx context.Context) {
 func (s *Service) cleanExpiredInvoices(ctx context.Context) {
 	ctx = context.WithValue(ctx, "skip_span", true)
 
-	invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
-		StatusIn:    []desc.InvoiceStatus{desc.InvoiceStatus_NEW, desc.InvoiceStatus_PENDING},
-		CreatedAtLt: lo.ToPtr(time.Now().Add(-config.Get(config.ExpireInterval).(time.Duration))),
-	})
+	invoices, err := s.storage.ListInvoices(
+		ctx,
+		storage.ListInvoicesFilter{
+			StatusIn:    []desc.InvoiceStatus{desc.InvoiceStatus_NEW, desc.InvoiceStatus_PENDING},
+			CreatedAtLt: lo.ToPtr(time.Now().Add(-config.Get(config.ExpireInterval).(time.Duration))),
+		},
+		postgres.NewPagination(1, 100),
+	)
 	if err != nil {
 		logger.Errorf("cleanExpiredInvoices: storage.ListInvoices: %w", err)
 		return
@@ -210,13 +226,14 @@ func (s *Service) cleanExpiredInvoices(ctx context.Context) {
 
 func (s *Service) transferWorker(ctx context.Context) {
 	ctx = context.WithValue(ctx, "skip_span", true)
+	ticker := time.NewTicker(5 * time.Second)
 
 	transferFunc := s.transferCallback()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.Tick(5 * time.Second):
+		case <-ticker.C:
 			go transferFunc(ctx)
 		}
 	}
@@ -229,9 +246,13 @@ func (s *Service) transferCallback() func(ctx context.Context) {
 	)
 
 	return func(ctx context.Context) {
-		invoices, err := s.storage.ListInvoices(ctx, storage.ListInvoicesFilter{
-			StatusIn: []desc.InvoiceStatus{desc.InvoiceStatus_SENDING_TO_CLIENT},
-		})
+		invoices, err := s.storage.ListInvoices(
+			ctx,
+			storage.ListInvoicesFilter{
+				StatusIn: []desc.InvoiceStatus{desc.InvoiceStatus_SENDING_TO_CLIENT},
+			},
+			postgres.NewPagination(1, 100),
+		)
 		if err != nil {
 			logger.Errorf("transferWorker: storage.ListInvoices: %w", err)
 			return
